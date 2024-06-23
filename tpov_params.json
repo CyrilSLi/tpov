@@ -1,0 +1,45 @@
+{
+    "map_matcher": "SimpleMatcher",
+    "stop_matcher": "NaiveStopMatcher",
+    "use_rtree": false,
+    "exit_filter": "way ['highway'] != 'service' and not way ['highway'].endswith ('_link')",
+    "default_name": "Unnamed Road",
+    "forward_angle": 45,
+    "follow_link": "Link −> %n",
+    "snap_gpx": true,
+    "process_divided": {
+        "angle": 10,
+        "length": 50,
+        "same_name": true,
+        "apply_filter": true
+    },
+    "hw_priority": {
+        "busway": 7,
+        "motorway": 6,
+        "trunk": 5,
+        "primary": 4,
+        "secondary": 3,
+        "tertiary": 2,
+        "unclassified": 1,
+        "residential": 1
+    },
+    "matcher_params": {
+        "max_dist": 55,
+        "max_dist_init": 75,
+        "min_prob_norm": 0.001,
+        "non_emitting_length_factor": 0.5,
+        "obs_noise": 50,
+        "obs_noise_ne": 75,
+        "dist_noise": 100,
+        "non_emitting_states": true,
+        "max_lattice_width": 5,
+        "avoid_goingback": true
+    },
+    "display": "SimpleTextDisplay",
+    "display_params": {
+        "duration": 10,
+        "transfer_separator": " ",
+        "bar_width": 50,
+        "bar_char": "█"
+    }
+}
