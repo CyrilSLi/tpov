@@ -13,6 +13,8 @@
 *.xml
 *.zip
 *.json
+*.html
 
 !tpov_filter.txt
 !tpov_params.json
+!visualization_template.html

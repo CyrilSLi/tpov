@@ -13,6 +13,7 @@
         "same_name": true,
         "apply_filter": true
     },
+    "visualize": true,
     "hw_priority": {
         "busway": 7,
         "motorway": 6,
@@ -24,7 +25,7 @@
         "residential": 1
     },
     "matcher_params": {
-        "max_dist": 55,
+        "max_dist": 50,
         "max_dist_init": 75,
         "min_prob_norm": 0.001,
         "non_emitting_length_factor": 0.5,

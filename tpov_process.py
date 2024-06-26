@@ -1,5 +1,5 @@
 # Built-in modules:
-import subprocess, struct, pickle, os, math, json, bisect, argparse, shutil
+import subprocess, struct, pickle, os, math, json, bisect, argparse, shutil, webbrowser, threading
 
 # Third-party modules:
 import osmium, gpxpy
@@ -49,6 +49,37 @@ class lmmHandler (osmium.SimpleHandler):
                 self.tags [struct.pack ("<Q", i.ref) + struct.pack ("<Q", j.ref)] = w.id
         self.way_cnt.update ()
 
+# Visualize each intersection and action (e.g. process_divided) in a HTML file with a map background
+class HTMLVisualizer:
+    def __init__ (self, lat, lon, template = "visualization_template.html", combine_duplicates = True):
+        with open (template, "r") as f:
+            self.template = f.read ()
+        self.combine_duplicates = combine_duplicates
+        self.lat, self.lon = lat, lon
+        self.uids, self.markers = set (), {}
+        self.points = []
+        self.replacements = {
+            r"%lat": lambda: str (self.lat),
+            r"%lon": lambda: str (self.lon),
+            r"%markers": lambda: str (list (self.markers.values ())),
+            r"%points": lambda: str (self.points)
+        }
+    def add_marker (self, uid, lat, lon, text = ""):
+        if uid in self.uids:
+            if self.combine_duplicates:
+                self.markers [uid] ["text"] += f"<br><br>{text}"
+        else:
+            self.markers [uid] = {"lat": lat, "lon": lon, "text": text}
+            self.uids.add (uid)
+    def add_point (self, lat, lon):
+        self.points.append ([lat, lon])
+    def write (self, path = "visualization.html"):
+        page = self.template
+        for i, j in self.replacements.items ():
+            page = page.replace (i, j ())
+        with open (path, "w") as f:
+            f.write (page)
+
 def match_gpx (
     gpx_path,
     map_path,
@@ -59,12 +90,20 @@ def match_gpx (
     forward_angle = 45, # Angle threshold for forward direction
     follow_link = "%n", # Replace %n with link destination name, "" to disable
     process_divided = None, # Divided road processing parameters
+    visualize = False, # Visualize intersections and actions in HTML
     hw_priority = {}, # Priority for highway types, default is 0
     matcher_params = {}): # Matcher parameters
 
     with open (gpx_path, "r") as f:
         gpx = gpxpy.parse (f)
         points = tuple (gpx.walk (True))
+    if visualize:
+        if not os.path.exists ("visualization_template.html"):
+            raise FileNotFoundError ("Could not find visualization_template.html.")
+        bounds = gpx.get_bounds ()
+        visualizer = HTMLVisualizer (bounds.min_latitude + (bounds.max_latitude - bounds.min_latitude) / 2,
+                                     bounds.min_longitude + (bounds.max_longitude - bounds.min_longitude) / 2)
+
     if not os.path.exists (map_path):
         raise FileNotFoundError ("Could not find map file.")
     if os.path.exists (map_path + ".pkl"):
@@ -94,7 +133,12 @@ def match_gpx (
 
     _, lastidx = matcher.match([(i.latitude, i.longitude, i.time) for i in points], tqdm = tqdm)
     if lastidx < len (points) - 1:
-        raise SystemExit ("Not all points were matched to a road. Try adjusting matcher parameters.")
+        last_l1, last_l2 = matcher.lattice_best [lastidx].edge_m.l1, matcher.lattice_best [lastidx].edge_m.l2
+        if input (
+            f"Not all points were matched. Last matched {last_l1} -> {last_l2} at ({map_con.graph [last_l1] [0] [1]}, {map_con.graph [last_l1] [0] [0]})."
+            "\nThis may be fixed by increasing max_dist and/or max_dist_init in the matcher parameters."
+            "\nContinue processing (Y/n)? ").lower () != "y":
+            raise SystemExit ("Processing cancelled.")
     for i, j in zip (matcher.lattice_best, matcher.lattice_best [1 : ]):
         if not (i.edge_m.l1 == j.edge_m.l1 and i.edge_m.l2 == j.edge_m.l2) and i.edge_m.l2 != j.edge_m.l1:
             raise NotImplementedError (f"Path discontinuity at ({i.edge_m.l1}, {i.edge_m.l2}) -> ({j.edge_m.l1}, {j.edge_m.l2})")
@@ -105,9 +149,18 @@ def match_gpx (
     # [gpx index, intersection node, current name, left name, forward name, right name, exit direction]
     directions = [(0, matcher.lattice_best [0].edge_m.l1, exit_name, "", "", "", "")]
 
+    # Add a dict of information about a node into a marker
+    def add_marker (node, info, title = "Marker"):
+        if visualize:
+            nonlocal visualizer, map_con
+            template = "<b>{title}</b><br>Node ID: {node}<br>Latitude: {lat}<br>Longitude: {lon}<br>{info}"
+            lat, lon = map_con.graph [node] [0]
+            info = "<br>".join (f"{k}: {v}" for k, v in info.items ())
+            visualizer.add_marker (node, lat, lon, template.format (title = title, node = node, lat = lat, lon = lon, info = info))
+
     def divided_process (case, dest, orig, orig_id = None, orig_angle = None):
         # Return true if exit should be ignored, false otherwise
-        nonlocal directions, map_con, tags, process_divided, matcher, default_name
+        nonlocal directions, map_con, tags, process_divided, matcher, default_name, visualize, add_marker
         for i in ("length", "angle", "same_name", "apply_filter"):
             if i not in process_divided:
                 raise KeyError (f"process_divided: Missing parameter '{i}'")
@@ -138,6 +191,7 @@ def match_gpx (
                 if angle_diff <= process_divided ["angle"]:
                     if not process_divided ["same_name"] or tags [orig_id].get ("name", default_name) == name:
                         print (f"process_divided (1): Ignoring {', '.join (names)} {visited [0]} -> {orig} with angle {angle_diff:.4f} and length {dist:.4f}")
+                        add_marker (visited [0], {"Name(s)": ", ".join (names), "Angle": angle_diff, "Length": dist}, "process_divided (1)")
                         return True
                 dist += gpxpy.geo.Location (map_con.graph [dest] [0] [1], map_con.graph [dest] [0] [0]).distance_2d (
                         gpxpy.geo.Location (map_con.graph [orig] [0] [1], map_con.graph [orig] [0] [0]))
@@ -178,12 +232,13 @@ def match_gpx (
                     last_node = i.edge_m.l2
                 if i.edge_m.l2 == orig:
                     print (f"process_divided (2): Ignoring {dest_name} {orig} -> {dest} with angle {angle_diff:.4f} and length {dist:.4f}")
+                    add_marker (orig, {"Name": dest_name, "Angle": angle_diff, "Length": dist}, "process_divided (2)")
                     return True
 
         raise NotImplementedError ("Divided road processing for case {case} not implemented.")
     link_until = (None, -1) # (name, last index of link road)
     def link_follow (index, way): # Return the name of the destination road
-        nonlocal matcher, tags, default_name, link_until, follow_link
+        nonlocal matcher, tags, default_name, link_until, follow_link, add_marker
         if index <= link_until [1]:
             return link_until [0]
 
@@ -194,6 +249,7 @@ def match_gpx (
                 if not dest.get ("highway").endswith ("_link"):
                     link_until = (follow_link.replace ("%n", dest.get ("name", default_name)), index + l)
                     print (f"follow_link: Followed link {matcher.lattice_best [index].edge_m.l1} -> {k.edge_m.l1} to {dest.get ('name', default_name)}")
+                    add_marker (matcher.lattice_best [index].edge_m.l1, {"Destination": dest.get ("name", default_name)}, "follow_link")
                     return link_until [0]
         return way.get ("name", default_name)
 
@@ -212,6 +268,7 @@ def match_gpx (
                     if dest != i.edge_m.l2:
                         continue # Skip previous road
                     print (f"Warning: Loop detected at node {orig} (may be a U-turn)")
+                    add_marker (orig, {}, "Warning: Loop detected")
                 elif not (exit_filter (way) or dest == i.edge_m.l2):
                     continue # Use filter to exclude certain exits not leading to the next road
                 elif process_divided and dest != i.edge_m.l2:
@@ -292,8 +349,9 @@ def match_gpx (
                 dirs [index] = candidate [0].get ("name", default_name)
             # [gpx index, intersection node, current name, left name, forward name, right name, exit direction]
             directions.append ((j + 1, orig, last_name, dirs [0], dirs [1], dirs [2], exit_dir))
+            add_marker (orig, {"Current": last_name, "Left": dirs [0], "Forward": dirs [1], "Right": dirs [2], "Exit": exit_dir}, "Intersection")
     
-    return directions, matcher.lattice_best, map_con
+    return directions, matcher.lattice_best, map_con, visualizer if visualize else None
 
 def SimpleTextDisplay (
         gpx_len,
@@ -366,8 +424,6 @@ def SimpleTextDisplay (
                     range_set (i [0] - params ["duration"], i [0], f"tpov.{k}_exit", "\u200c")
 
     return metadata, fields
-                
-
 
 def NaiveStopMatcher (gpx_path, stop_data, lattice_best = None, map_con = None):
     # This is a naive implementation that matches stops to the nearest point in the GPX file
@@ -430,6 +486,7 @@ if __name__ == "__main__":
         follow_link = params ["follow_link"]
         snap_gpx = params ["snap_gpx"]
         process_divided = params ["process_divided"]
+        visualize = params ["visualize"]
         hw_priority = params ["hw_priority"]
         matcher_params = params ["matcher_params"]
         display = displays [params ["display"]] ["func"]
@@ -441,7 +498,7 @@ if __name__ == "__main__":
         raise SystemExit (f"Parameter {e} missing or invalid. Run with -h for help.")
 
     if args.map:
-        dirs, lattice_best, map_con = match_gpx (
+        dirs, lattice_best, map_con, visualizer = match_gpx (
             gpx_path = args.gpx,
             map_path = args.map,
             matcher_cls = map_matcher,
@@ -451,6 +508,7 @@ if __name__ == "__main__":
             forward_angle = forward_angle,
             follow_link = follow_link,
             process_divided = process_divided,
+            visualize = visualize,
             hw_priority = hw_priority,
             matcher_params = matcher_params)
     else:
@@ -460,6 +518,9 @@ if __name__ == "__main__":
         with open (args.stop, "r") as f:
             stop_data = json.load (f)
         stop_indices = stop_matcher (args.gpx, stop_data, lattice_best, map_con)
+        if visualizer:
+            for i in stop_data ["__stops__"]:
+                visualizer.add_marker (i ["stop_id"], i ["stop_lat"], i ["stop_lon"], f"<b>Matched stop:</b> {i ['stop_name']}")
     else:
         stop_data, stop_indices = {}, []
 
@@ -528,3 +589,16 @@ if __name__ == "__main__":
     with open (gpx_out, "w") as f:
         f.write (gpx.to_xml (version = "1.1"))
         print ("Saved data to", gpx_out)
+    
+    if visualizer:
+        html_path = os.path.abspath ("visualization.html")
+        fp = next (gpx.walk (True))
+        visualizer.add_marker (object (), fp.latitude, fp.longitude, f"<b>Origin</b><br>Latitude: {fp.latitude}<br>Longitude: {fp.longitude}")
+        for i in gpx.walk (True):
+            lp = i
+            visualizer.add_point (i.latitude, i.longitude)
+        visualizer.add_marker (object (), lp.latitude, lp.longitude, f"<b>Destination</b><br>Latitude: {lp.latitude}<br>Longitude: {lp.longitude}")
+        visualizer.write (html_path)
+        print (f"Opening visualization at {html_path}: ", end = "", flush = True)
+        t = threading.Thread (target = webbrowser.open_new_tab, args = [f"file://{html_path}"])
+        t.start ()
