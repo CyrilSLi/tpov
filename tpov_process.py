@@ -350,7 +350,7 @@ def match_gpx (
             # [gpx index, intersection node, current name, left name, forward name, right name, exit direction]
             directions.append ((j + 1, orig, last_name, dirs [0], dirs [1], dirs [2], exit_dir))
             add_marker (orig, {"Current": last_name, "Left": dirs [0], "Forward": dirs [1], "Right": dirs [2], "Exit": exit_dir}, "Intersection")
-    
+
     return directions, matcher.lattice_best, map_con, visualizer if visualize else None
 
 def SimpleTextDisplay (
@@ -393,7 +393,7 @@ def SimpleTextDisplay (
             else:
                 metadata [f"tpov.transfer.{j}"] = "\u200c"
 
-        stop_indices = [i + 1 for i in stop_indices] # Use the first point after the stop
+        stop_indices = [min (i + 1, gpx_len) for i in stop_indices] # Use the first point after the stop
         for k, (j, i) in enumerate (zip ([0] + stop_indices, stop_indices + [gpx_len])):
             if 0 <= k - 1 < len (stops):
                 range_set (j, i, "tpov.prev_stop", f"tpov.stop.{k - 1}")
@@ -405,6 +405,12 @@ def SimpleTextDisplay (
             else:
                 range_set (j, i, "tpov.next_stop", "\u200c")
                 range_set (j, i, "tpov.transfers", "\u200c")
+            if params ["bar_width"] and params ["bar_char"]:
+                for m in range (j, i):
+                    chars = min (math.floor ((params ["bar_width"] + 1) / (i - j) * (m - j + 1)), params ["bar_width"])
+                    fields [m] ["tpov.stop_bar"] = params ["bar_char"] * (params ["bar_width"] - chars if params ["bar_reverse"] else chars)
+                    if not fields [m] ["tpov.stop_bar"]:
+                        fields [m] ["tpov.stop_bar"] = "\u200c" # Do not replace with "-"
     else:
         fields = tuple ((field.copy () for _ in range (gpx_len)))
 
@@ -458,7 +464,8 @@ displays = {
             "duration",
             "transfer_separator",
             "bar_width",
-            "bar_char"
+            "bar_char",
+            "bar_reverse"
         ]
     }
 }
@@ -520,7 +527,7 @@ if __name__ == "__main__":
         stop_indices = stop_matcher (args.gpx, stop_data, lattice_best, map_con)
         if visualizer:
             for i in stop_data ["__stops__"]:
-                visualizer.add_marker (i ["stop_id"], i ["stop_lat"], i ["stop_lon"], f"<b>Matched stop:</b> {i ['stop_name']}")
+                visualizer.add_marker (object (), i ["stop_lat"], i ["stop_lon"], f"<b>Matched stop:</b> {i ['stop_name']}")
     else:
         stop_data, stop_indices = {}, []
 
@@ -552,7 +559,7 @@ if __name__ == "__main__":
     if stop_data:
         for i in stop_data ["__stops__"]:
             gpx.waypoints.append (gpxpy.gpx.GPXWaypoint (latitude = i ["stop_lat"], longitude = i ["stop_lon"], name = i ["stop_name"]))
-    if snap_gpx: # Snap GPX points to the nearest road
+    if False and snap_gpx: # Snap GPX points to the nearest road # TODO: Fix snapping
         def intersection (y1, x1, y2, x2, y3, x3):
             if x1 == x2: # Vertical line
                 return y3, x1
@@ -562,6 +569,21 @@ if __name__ == "__main__":
             scale = math.cos (math.radians (y3)) # Latitude correction
             y1, y2, y3 = y1 * scale, y2 * scale, y3 * scale
 
+            angle2 = math.atan2 (x2 - x1, y2 - y1)
+            angle3 = math.atan2 (x3 - x1, y3 - y1)
+            angle312 = angle3 - angle2
+            #print (angle312)
+            dist12 = ((y2 - y1) ** 2 + (x2 - x1) ** 2) ** 0.5
+            dist13 = ((y3 - y1) ** 2 + (x3 - x1) ** 2) ** 0.5
+            dist14 = math.cos (angle312) * dist13
+            x4 = x1 + (x2 - x1) * dist14 / dist12
+            y4 = y1 + (y2 - y1) * dist14 / dist12
+
+            #print ((y4 - y1) / (x4 - x1), (y2 - y1) / (x2 - x1))
+            #assert (y4 - y1) / (x4 - x1) == (y2 - y1) / (x2 - x1) # Check if the point is on the line
+
+            return y4 / scale, x4
+
             slope, inv_slope = (y2 - y1) / (x2 - x1), -(x2 - x1) / (y2 - y1)
             intercept, inv_intercept = y1 - slope * x1, y3 - inv_slope * x3
             x4 = (inv_intercept - intercept) / (slope - inv_slope)
@@ -569,7 +591,26 @@ if __name__ == "__main__":
 
             return y4 / scale, x4
 
+        l1, l2, k = lattice_best [0].edge_m.l1, lattice_best [0].edge_m.l2, 0
         for i, j in zip (gpx.walk (True), lattice_best):
+            """ #path_points = (lattice_best [0].edge_m.l1, ) + tuple (j.edge_m.l2 for j in lattice_best)
+            #path_points = gpxpy.geo.Location (map_con.graph [j] [0] for j in path_points)
+            i.latitude, i.longitude = min ((intersection (
+                *map_con.graph [j.edge_m.l1] [0],
+                *map_con.graph [j.edge_m.l2] [0],
+                i.latitude, i.longitude
+            ) for j in lattice_best), key = lambda k: gpxpy.geo.Location (*k).distance_2d (i))
+            visualizer.add_marker (object (), *map_con.graph [j.edge_m.l1] [0])
+            visualizer.add_marker (object (), *map_con.graph [j.edge_m.l2] [0])
+            #visualizer.add_marker (object (), i.latitude, i.longitude, "Original")
+            continue """
+            """ if k <= j:
+                print (lattice_best [k].edge_m.l1, l1)
+                while k + 1 < len (lattice_best) and lattice_best [k].edge_m.l1 == l1:
+                    print (lattice_best [k].edge_m.l1, l1)
+                    k += 1
+                print (j, k)
+                l1, l2 = l2, lattice_best [k].edge_m.l1 """
             i.latitude, i.longitude = intersection (
                 *map_con.graph [j.edge_m.l1] [0],
                 *map_con.graph [j.edge_m.l2] [0],
@@ -599,6 +640,6 @@ if __name__ == "__main__":
             visualizer.add_point (i.latitude, i.longitude)
         visualizer.add_marker (object (), lp.latitude, lp.longitude, f"<b>Destination</b><br>Latitude: {lp.latitude}<br>Longitude: {lp.longitude}")
         visualizer.write (html_path)
-        print (f"Opening visualization at {html_path}: ", end = "", flush = True)
+        print (f"Opening visualization: ", end = "", flush = True)
         t = threading.Thread (target = webbrowser.open_new_tab, args = [f"file://{html_path}"])
         t.start ()
