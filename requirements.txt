@@ -1,0 +1,9 @@
+texttable
+tqdm
+requests
+coord-convert
+bd09convertor
+osmium
+gpxpy
+leuvenmapmatching
+lxml
