@@ -6,9 +6,9 @@
 tpov文档
 ================================
 
-tpov是一个用于帮助制作\(公共\)交通pov视频的Python工具包。建议使用`OpenStreetMap_`地图数据与`gopro-dashboard-overlay_`生成pov叠加视频, 但也可以使用其他地图或视频制作工具。
+tpov是一个用于帮助制作\(公共\)交通pov视频的Python工具包。建议使用`OpenStreetMap`_地图数据与\ gopro-dashboard-overlay_\ 生成pov叠加视频, 但也可以使用其他地图或视频制作工具。
 
-支持用OpenStreetMap地图文件生成路线与路口信息和用`GTFS_`、`OpenStreetMap_`或`百度地图_`公交数据将站点与录制的线路匹配, 并将数据导出到带有自定义扩展属性的.gpx文件。
+支持用OpenStreetMap地图文件生成路线与路口信息和用\ GTFS_\ 、\ OpenStreetMap_\ 或\ 百度地图_\ 公交数据将站点与录制的线路匹配, 并将数据导出到带有自定义扩展属性的.gpx文件。
 
 .. _OpenStreetMap: https://www.openstreetmap.org/
 .. _gopro-dashboard-overlay: https://github.com/time4tea/gopro-dashboard-overlay
