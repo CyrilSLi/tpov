@@ -41,6 +41,7 @@
         "duration": 10,
         "transfer_separator": " ",
         "bar_width": 50,
-        "bar_char": "█"
+        "bar_char": "█",
+        "bar_reverse": false
     }
 }
