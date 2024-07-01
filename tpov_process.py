@@ -133,6 +133,8 @@ def match_gpx (
 
     _, lastidx = matcher.match([(i.latitude, i.longitude, i.time) for i in points], tqdm = tqdm)
     if lastidx < len (points) - 1:
+        if not lastidx: # No points matched - likely due to origin being too far from a road
+            raise SystemExit ("No points matched. Try increasing max_dist_init in the matcher parameters.")
         last_l1, last_l2 = matcher.lattice_best [lastidx].edge_m.l1, matcher.lattice_best [lastidx].edge_m.l2
         if input (
             f"Not all points were matched. Last matched {last_l1} -> {last_l2} at ({map_con.graph [last_l1] [0] [1]}, {map_con.graph [last_l1] [0] [0]})."
