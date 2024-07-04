@@ -1,0 +1,115 @@
+{
+    "$schema": "http://json-schema.org/draft/2020-12/schema",
+    "title": "match_params",
+    "type": "object",
+    "properties": {
+        "map_matcher": {
+            "type": "string",
+            "enum": ["SimpleMatcher", "DistanceMatcher"]
+        },
+        "stop_matcher": {
+            "type": "string",
+            "enum": ["NaiveStopMatcher"]
+        },
+        "use_rtree": {
+            "type": "boolean"
+        },
+        "exit_filter": {
+            "oneOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "boolean",
+                    "enum": [false]
+                }
+            ]
+        },
+        "default_name": {
+            "type": "string"
+        },
+        "forward_angle": {
+            "type": "number"
+        },
+        "follow_link": {
+            "type": "string"
+        },
+        "snap_gpx": {
+            "type": "boolean"
+        },
+        "process_divided": {
+            "oneOf": [
+                {
+                    "type": "object",
+                    "properties": {
+                        "angle": {
+                            "type": "number"
+                        },
+                        "length": {
+                            "type": "number"
+                        },
+                        "same_name": {
+                            "type": "boolean"
+                        },
+                        "apply_filter": {
+                            "type": "boolean"
+                        }
+                    },
+                    "additionalProperties": false,
+                    "required": ["angle", "length", "same_name", "apply_filter"]
+                },
+                {
+                    "type": "boolean",
+                    "enum": [false]
+                }
+            ]
+        },
+        "visualize": {
+            "type": "boolean"
+        },
+        "hw_priority": {
+            "type": "object",
+            "additionalProperties": {
+                "type": "integer"
+            }
+        },
+        "matcher_params": {
+            "type": "object"
+        },
+        "display_params": {
+            "type": "object",
+            "oneOf": [
+                {
+                    "type": "object",
+                    "properties": {
+                        "display": {
+                            "type": "string",
+                            "const": "SimpleTextDisplay"
+                        },
+                        "duration": {
+                            "type": "number"
+                        },
+                        "transfer_separator": {
+                            "type": "string"
+                        },
+                        "bar_width": {
+                            "type": "integer"
+                        },
+                        "bar_char": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1
+                        },
+                        "bar_reverse": {
+                            "type": "boolean"
+                        }
+                    },
+                    "additionalProperties": false,
+                    "required": ["display", "duration", "transfer_separator", "bar_width", "bar_char", "bar_reverse"]
+                }
+            ]
+        }
+    },
+    "additionalProperties": false,
+    "minProperties": 13
+}

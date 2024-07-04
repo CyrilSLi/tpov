@@ -16,6 +16,8 @@
 *.html
 
 !tpov_filter.txt
-!matcher_params.json
+!match_params.json
+!match_schema.json
 !announce_params.json
+!announce_schema.json
 !visualization_template.html

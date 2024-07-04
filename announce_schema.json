@@ -1,0 +1,43 @@
+{
+    "$schema": "http://json-schema.org/draft/2020-12/schema",
+    "title": "announce_params",
+    "type": "object",
+    "properties": {
+        "folder_name": {
+            "type": "object",
+            "properties": {
+                "line": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "stop": {
+                    "type": "string",
+                    "minLength": 1
+                }
+            },
+            "additionalProperties": false,
+            "required": ["line", "stop"]
+        },
+        "spacing": {
+            "type": "object",
+            "properties": {
+                "start": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "end": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "between": {
+                    "type": "number",
+                    "minimum": 0
+                }
+            },
+            "additionalProperties": false,
+            "required": ["start", "end", "between"]
+        }
+    },
+    "additionalProperties": false,
+    "minProperties": 2
+}

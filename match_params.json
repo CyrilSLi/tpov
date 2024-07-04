@@ -36,8 +36,8 @@
         "max_lattice_width": 5,
         "avoid_goingback": true
     },
-    "display": "SimpleTextDisplay",
     "display_params": {
+        "display": "SimpleTextDisplay",
         "duration": 10,
         "transfer_separator": " ",
         "bar_width": 50,

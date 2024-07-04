@@ -2,7 +2,7 @@
 import subprocess, struct, pickle, os, math, json, bisect, argparse, shutil, webbrowser, threading
 
 # Third-party modules:
-import osmium, gpxpy
+import osmium, gpxpy, jsonschema
 from tqdm import tqdm
 from texttable import Texttable
 from leuvenmapmatching.map.inmem import InMemMap
@@ -460,16 +460,7 @@ stop_matchers = {
     "NaiveStopMatcher": NaiveStopMatcher
 }
 displays = {
-    "SimpleTextDisplay": {
-        "func": SimpleTextDisplay,
-        "params": [
-            "duration",
-            "transfer_separator",
-            "bar_width",
-            "bar_char",
-            "bar_reverse"
-        ]
-    }
+    "SimpleTextDisplay": SimpleTextDisplay
 }
 
 if __name__ == "__main__":
@@ -485,26 +476,23 @@ if __name__ == "__main__":
     args = parser.parse_args ()
 
     params = json.load (open (args.params, "r"))
-    try:
-        map_matcher = map_matchers [params ["map_matcher"]]
-        stop_matcher = stop_matchers [params ["stop_matcher"]]
-        use_rtree = params ["use_rtree"]
-        exit_filter = lambda way: eval (params ["exit_filter"], {"way": way})
-        default_name = params ["default_name"]
-        forward_angle = params ["forward_angle"]
-        follow_link = params ["follow_link"]
-        snap_gpx = params ["snap_gpx"]
-        process_divided = params ["process_divided"]
-        visualize = params ["visualize"]
-        hw_priority = params ["hw_priority"]
-        matcher_params = params ["matcher_params"]
-        display = displays [params ["display"]] ["func"]
-        display_params = {}
-        for i in displays [params ["display"]] ["params"]:
-            display_params [i] = params ["display_params"] [i]
+    schema = json.load (open ("match_schema.json", "r"))
+    jsonschema.validate (instance = params, schema = schema)
 
-    except KeyError as e:
-        raise SystemExit (f"Parameter {e} missing or invalid. Run with -h for help.")
+    map_matcher = map_matchers [params ["map_matcher"]]
+    stop_matcher = stop_matchers [params ["stop_matcher"]]
+    use_rtree = params ["use_rtree"]
+    exit_filter = lambda way: eval (params ["exit_filter"], {"way": way})
+    default_name = params ["default_name"]
+    forward_angle = params ["forward_angle"]
+    follow_link = params ["follow_link"]
+    snap_gpx = params ["snap_gpx"]
+    process_divided = params ["process_divided"]
+    visualize = params ["visualize"]
+    hw_priority = params ["hw_priority"]
+    matcher_params = params ["matcher_params"]
+    display_params = params ["display_params"]
+    display = displays [display_params ["display"]]
 
     if args.map:
         dirs, lattice_best, map_con, visualizer = match_gpx (

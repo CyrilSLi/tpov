@@ -1,0 +1,11 @@
+{
+    "folder_name": {
+        "line": "{agency_name}_{route_long_name}_{%g}",
+        "stop": "{%i}_{stop_name}"
+    },
+    "spacing": {
+        "start": 0.5,
+        "end": 0.5,
+        "between": 1.0
+    }
+}

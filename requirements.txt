@@ -7,3 +7,4 @@ osmium
 gpxpy
 leuvenmapmatching
 lxml
+jsonschema
