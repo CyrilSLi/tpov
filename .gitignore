@@ -17,4 +17,5 @@
 
 !tpov_filter.txt
 !matcher_params.json
+!announce_params.json
 !visualization_template.html
