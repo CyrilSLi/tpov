@@ -33,7 +33,7 @@ def convert (map_file, filter_file):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser (
-        description = "Convert and filter OSM map files for use with tpov.",
+        description = "Convert and filter OSM map files for use with tpov_match.py",
         formatter_class = argparse.RawDescriptionHelpFormatter,
         epilog = f"""\
 This program and the tpov suite require the tools osmconvert and osmfilter.
