@@ -8,3 +8,4 @@ gpxpy
 leuvenmapmatching
 lxml
 jsonschema
+dateutil
