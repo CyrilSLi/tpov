@@ -7,6 +7,12 @@ from tpov_functions import *
 osmconvert_formats = (".osm", ".osc", ".osc.gz", ".osh", ".o5m", ".o5c", ".pbf")
 
 def convert (map_file, filter_file):
+    try:
+        with open (filter_file) as f:
+            pass
+    except FileNotFoundError:
+        raise FileNotFoundError (f"Filter file {filter_file} not found")
+
     if os.path.splitext (map_file) [1] not in osmconvert_formats:
         raise ValueError (f"Invalid file format. Supported formats: {', '.join (osmconvert_formats)}")
     elif os.path.splitext (map_file) [1] not in (".osm", ".o5m"): # Convert to .o5m format
@@ -20,7 +26,7 @@ def convert (map_file, filter_file):
         o5m_file = map_file
 
     print (f"Filtering {o5m_file} with {filter_file}...")
-    output_file = os.path.splitext (map_file) [0] + ".out.o5m"
+    output_file = os.path.splitext (map_file) [0] + ".filtered.o5m"
     sys.stdout.flush ()
     sys.stderr.flush ()
     osmfilter = subprocess.run (["osmfilter", o5m_file, "--parameter-file=" + filter_file, "-o=" + output_file], stdout = sys.stdout, stderr = sys.stderr)

@@ -530,7 +530,7 @@ if __name__ == "__main__":
         table.add_rows (dirs, header = False)
         print (table.draw ())
 
-    gpx_out = os.path.abspath (os.path.splitext (args.gpx) [0] + ".out.gpx")
+    gpx_out = os.path.abspath (os.path.splitext (args.gpx) [0] + ".matched.gpx")
     if input (f"Write stop and intersection data to {gpx_out} (Y/n)? ").lower () != "y":
         raise SystemExit ("Write cancelled.")
     with open (args.gpx, "r") as f:

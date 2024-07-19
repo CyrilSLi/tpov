@@ -1,5 +1,5 @@
 # Built-in modules
-import os, argparse, copy
+import os, argparse, copy, subprocess
 from datetime import datetime
 
 # Third-party modules
@@ -24,6 +24,8 @@ def truncate (gpx_path, start, end):
         while first_seg.points [0].time < start_time:
             first_seg.points.pop (0)
             count += 1
+            if not first_seg.points:
+                raise ValueError ("gpx file does not overlap with start time")
         first_time = first_seg.points [0].time
         print (f"Truncated {count} point(s) from the beginning")
     if end_time and end_time < last_time: # Truncate the end
@@ -31,6 +33,8 @@ def truncate (gpx_path, start, end):
         while last_seg.points [-1].time > end_time:
             last_seg.points.pop ()
             count += 1
+            if not last_seg.points:
+                raise ValueError ("gpx file does not overlap with end time")
         last_time = last_seg.points [-1].time
         print (f"Truncated {count} point(s) from the end")
 
@@ -43,7 +47,7 @@ def truncate (gpx_path, start, end):
         last_seg.points [-1].time = end_time
         print ("Extended the end")
     
-    gpx_out = os.path.abspath (os.path.splitext (args.gpx) [0] + ".out.gpx")
+    gpx_out = os.path.abspath (os.path.splitext (args.gpx) [0] + ".truncated.gpx")
     with open (gpx_out, "w") as gpx_file:
         gpx_file.write (gpx.to_xml ())
         print (f"Saved truncated/extended file to", gpx_out)
@@ -56,7 +60,16 @@ if __name__ == "__main__":
 """
     )
     parser.add_argument ("gpx", help = "The gpx file to truncate or extend")
-    parser.add_argument ("start", help = "The start time in ISO 8601 format")
-    parser.add_argument ("end", help = "The end time in ISO 8601 format")
+    parser.add_argument ("-t", "--time", help = "The start and end time in ISO 8601 format", nargs = 2)
+    parser.add_argument ("-e", "--exiftool", help = "Run exiftool on a video file to get the start and end time")
     args = parser.parse_args ()
-    truncate (args.gpx, args.start, args.end)
+    if args.exiftool:
+        exif = subprocess.run (["exiftool", "-CreateDate", "-ModifyDate", "-d", "%Y-%m-%dT%H:%M:%SZ", args.exiftool], capture_output = True)
+        exif.check_returncode ()
+        start, end = (i.split (":", 1) [1].strip () for i in exif.stdout.decode ().split ("\n") if i)
+    elif args.time:
+        start, end = args.time
+    else:
+        raise SystemExit ("No action requested: Use -t or -e to specify the start and end time.")
+    print (f"Start time: {start}  End time: {end}")
+    truncate (args.gpx, start, end)
