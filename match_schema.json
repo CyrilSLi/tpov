@@ -29,7 +29,9 @@
             "type": "string"
         },
         "forward_angle": {
-            "type": "number"
+            "type": "number",
+            "minimum": 0,
+            "maximum": 180
         },
         "follow_link": {
             "type": "string"
@@ -43,10 +45,13 @@
                     "type": "object",
                     "properties": {
                         "angle": {
-                            "type": "number"
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 180
                         },
                         "length": {
-                            "type": "number"
+                            "type": "number",
+                            "minimum": 0
                         },
                         "same_name": {
                             "type": "boolean"
@@ -87,13 +92,15 @@
                             "const": "SimpleTextDisplay"
                         },
                         "duration": {
-                            "type": "number"
+                            "type": "number",
+                            "minimum": 0
                         },
                         "transfer_separator": {
                             "type": "string"
                         },
                         "bar_width": {
-                            "type": "integer"
+                            "type": "integer",
+                            "minimum": 1
                         },
                         "bar_char": {
                             "type": "string",
