@@ -89,7 +89,7 @@
                     "properties": {
                         "display": {
                             "type": "string",
-                            "const": "SimpleTextDisplay"
+                            "enum": ["SimpleTextDisplay"]
                         },
                         "duration": {
                             "type": "number",
