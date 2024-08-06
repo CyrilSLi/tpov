@@ -60,8 +60,8 @@ if __name__ == "__main__":
 """
     )
     parser.add_argument ("gpx", help = "The gpx file to truncate or extend")
-    parser.add_argument ("-t", "--time", help = "The start and end time in ISO 8601 format", nargs = 2)
-    parser.add_argument ("-e", "--exiftool", help = "Run exiftool on a video file to get the start and end time")
+    parser.add_argument ("-t", "--time", help = "The start and end time in ISO 8601 format", nargs = 2, metavar = ("START", "END"))
+    parser.add_argument ("-e", "--exiftool", help = "Run exiftool on a video file to get the start and end time", metavar = "VIDEO")
     args = parser.parse_args ()
     if args.exiftool:
         exif = subprocess.run (["exiftool", "-CreateDate", "-ModifyDate", "-d", "%Y-%m-%dT%H:%M:%SZ", args.exiftool], capture_output = True)
