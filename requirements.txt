@@ -8,4 +8,5 @@ gpxpy
 leuvenmapmatching
 lxml
 jsonschema
-dateutil
+python-dateutil
+git+https://github.com/CyrilSLi/gopro-dashboard-overlay.git
