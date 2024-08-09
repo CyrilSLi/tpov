@@ -396,14 +396,16 @@ def SimpleTextDisplay (
                 metadata [f"tpov.transfer.{j}"] = "\u200c"
 
         stop_indices = [min (i + 1, gpx_len) for i in stop_indices] # Use the first point after the stop
+        # Using references in the gpx allows for easier editing but slower processing
+        reference = lambda string: string if params ["use_reference"] else metadata [string]
         for k, (j, i) in enumerate (zip ([0] + stop_indices, stop_indices + [gpx_len])):
             if 0 <= k - 1 < len (stops):
-                range_set (j, i, "tpov.prev_stop", f"tpov.stop.{k - 1}")
+                range_set (j, i, "tpov.prev_stop", reference (f"tpov.stop.{k - 1}"))
             else:
                 range_set (j, i, "tpov.prev_stop", "\u200c")
             if 0 <= k < len (stops):
-                range_set (j, i, "tpov.next_stop", f"tpov.stop.{k}")
-                range_set (j, i, "tpov.transfers", f"tpov.transfer.{k}")
+                range_set (j, i, "tpov.next_stop", reference (f"tpov.stop.{k}"))
+                range_set (j, i, "tpov.transfers", reference (f"tpov.transfer.{k}"))
             else:
                 range_set (j, i, "tpov.next_stop", "\u200c")
                 range_set (j, i, "tpov.transfers", "\u200c")

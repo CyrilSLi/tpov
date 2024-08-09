@@ -109,6 +109,9 @@
                         },
                         "bar_reverse": {
                             "type": "boolean"
+                        },
+                        "use_reference": {
+                            "type": "boolean"
                         }
                     },
                     "additionalProperties": false,

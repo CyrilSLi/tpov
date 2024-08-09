@@ -42,6 +42,7 @@
         "transfer_separator": " ",
         "bar_width": 50,
         "bar_char": "█",
-        "bar_reverse": false
+        "bar_reverse": false,
+        "use_reference": false
     }
 }
