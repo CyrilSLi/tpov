@@ -1,8 +1,5 @@
 **/__pycache__/
-.vscode/
-.gpx/
-.gtfs/
-.oldversions/
+.*/
 
 *.osm
 *.o5m
