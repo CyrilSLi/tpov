@@ -1,0 +1,32 @@
+<layout>
+
+    <component type="icon" x="0" y="0" file="top_dash.png" size="0" invert="false"/>
+    <component type="icon" x="0" y="784" file="bottom_dash.png" size="0" invert="false"/>
+
+    <component type="metric" x="30" y="20" metric="custom.metadata.tpov.route_long_name" size="48" align="la" outline_width="1" outline="255,255,255"/>
+    <component type="metric" x="960" y="20" metric="custom.field.tpov.current" size="48" align="ma" outline_width="1" outline="255,255,255"/>
+    <component type="datetime" x="1890" y="20" format="%d/%m/%Y %H:%M:%S" size="48" align="ra" outline_width="1" outline="255,255,255"/>
+
+    <component type="metric" x="30" y="90" metric="custom.field.tpov.left" size="48" align="la" outline_width="1" outline="255,255,255"/>
+    <component type="metric" x="30" y="90" metric="custom.field.tpov.left_exit" size="48" rgb="255,0,0" align="la" outline_width="1" outline="255,0,0"/>
+    <component type="metric" x="960" y="90" metric="custom.field.tpov.forward" size="48" align="ma" outline_width="1" outline="255,255,255"/>
+    <component type="metric" x="960" y="90" metric="custom.field.tpov.forward_exit" size="48" rgb="255,0,0" align="ma" outline_width="1" outline="255,0,0"/>
+    <component type="metric" x="1890" y="90" metric="custom.field.tpov.right" size="48" align="ra" outline_width="1" outline="255,255,255"/>
+    <component type="metric" x="1890" y="90" metric="custom.field.tpov.right_exit" size="48" rgb="255,0,0" align="ra" outline_width="1" outline="255,0,0"/>
+
+    <component type="metric_unit" x="148" y="820" align="ma" metric="speed" units="speed" size="48" outline_width="1" outline="255,255,255">{:~c}</component>
+    <component type="metric" x="148" y="850" align="ma" metric="speed" units="speed" dp="0" size="160" outline_width="1" outline="255,255,255"/>
+    <translate x="1644" y="804" name="moving_journey_map">
+        <frame width="256" height="256" bg="0,0,0,128" cr="35">
+            <component type="moving_journey_map" zoom="15" />
+        </frame>
+    </translate>
+
+    <component type="metric" x="910" y="850" metric="custom.field.tpov.prev_stop" size="28" align="ra" outline_width="1" outline="255,255,255"/>
+    <component type="text" x="960" y="835" size="48" align="ma" outline_width="1" outline="255,255,255">&gt;&gt;&gt;</component>
+    <component type="metric" x="1010" y="850" metric="custom.field.tpov.next_stop" size="28" align="la" outline_width="1" outline="255,255,255"/>
+    <component type="text" x="550" y="902" size="48" align="ra" outline_width="1" outline="255,255,255">Transfers:</component>
+    <component type="metric" x="560" y="902" metric="custom.field.tpov.transfers" size="48" align="la" outline_width="1" outline="255,255,255"/>
+    <component type="metric" x="960" y="980" metric="custom.field.tpov.stop_bar" size="40" align="ma" outline_width="1" outline="255,255,255"/>
+
+</layout>
