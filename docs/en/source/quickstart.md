@@ -41,6 +41,7 @@ Throughout the process, you will be asked to select an item from a list. The lis
 
 ```
 #  Label  Label  ...
+===============  ...
 0  Item1  Item2  ...
 1  Item3  Item4  ...
 2  Item5  Item6  ...
@@ -52,7 +53,7 @@ Items are selected using a mini-language roughly based on human language. Indice
 
 - `-` (dash) excludes an item or range from the selection.
 - `+` (plus) includes an item or range in the selection.
-- `to` formes an inclusive range of the two indices beside it.
+- `to` forms an inclusive range of the two indices beside it.
 
 Special values are used to select all or reverse the selection:
 
@@ -75,7 +76,7 @@ Choose one of the following methods to extract stop data: The data will be saved
 
 ### GTFS
 
-GTFS is a common format used by many transit agencies to provide data on their service. You can usually download GTFS feeds from the transit agency's website or from third-party feeds. Uncompress the GTFS feed if necessary.
+GTFS is a common format used by many transit agencies to provide data on their service. You can usually download GTFS feeds from the transit agency's website or third-party feeds. Uncompress the GTFS feed if necessary.
 
 **Note: The first time you run this script, it will take a while to sort and index the data.**
 
@@ -102,7 +103,7 @@ Stop data can be extracted from an OSM relation. You can find the relation ID by
 python3.10 tpov_extract.py osm relation_id stop_data.json
 ```
 
-**Be careful when using this method as the data may not be accurate.** In particular, pay attention to the 'Role' column when selecting stops to include as some relation have duplicate stops with 'stop' and 'platform' roles.
+**Be careful when using this method as the data may not be accurate.** In particular, pay attention to the 'Role' column when selecting stops to include as some relations have duplicate stops with 'stop' and 'platform' roles.
 
 ### Baidu Maps
 
@@ -128,7 +129,7 @@ python3.10 tpov_match.py match_params.json track.gpx --map map.out.o5m --stop st
 
 Documentation for `match_params.json` will be provided in the near future.
 
-The track needs to be truncated and/or extended to match the video (replace `/path/to/video` with the path your video file):
+The track needs to be truncated and/or extended to match the video (replace `/path/to/video` with the path to your video file):
 
 ```bash
 python3.10 tpov_truncate.py track.matched.gpx -e /path/to/video
@@ -160,6 +161,6 @@ gopro-dashboard.py --use-gpx-only --units-speed kph --font NotoSansCJK-VF --over
 
 ## Conclusion
 
-You should now have a transit POV video which shows the route on a map, the line number, speed, time, current road, the previous and next stops, transfer information, intersections, and a progress bar. You can further edit the video in a video editor to add music, transitions, etc.
+You should now have a transit POV video that shows the route on a map, the line number, speed, time, current road, the previous and next stops, transfer information, intersections, and a progress bar. You can further edit the video in a video editor to add music, transitions, etc.
 
 **Please note that the library is still in development and may have bugs. Please report any issues on the [GitHub repository](https://github.com/CyrilSLi/tpov/tree/main).**
