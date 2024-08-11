@@ -448,7 +448,6 @@ Currently supported data sources and required parameters:
 Source      Parameter       Example
 GTFS        GTFS directory  /path/to/gtfs (unzipped)
 OSM         Relation ID     1234567
-TIANDITU    API key         a1b2c3...
 BAIDU       Seckey          a1b2c3... ('none' to exclude)
 
 Core tags are consistent across all data sources:
