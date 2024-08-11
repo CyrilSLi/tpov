@@ -19,6 +19,8 @@ It supports generating route and intersection information from an OpenStreetMap 
    :maxdepth: 2
    :caption: Contents:
 
+   quickstart
+
 Indices and tables
 ==================
 
