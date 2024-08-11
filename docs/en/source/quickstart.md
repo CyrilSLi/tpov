@@ -128,3 +128,38 @@ python3.10 tpov_match.py match_params.json track.gpx --map map.out.o5m --stop st
 
 Documentation for `match_params.json` will be provided in the near future.
 
+The track needs to be truncated and/or extended to match the video (replace `/path/to/video` with the path your video file):
+
+```bash
+python3.10 tpov_truncate.py track.matched.gpx -e /path/to/video
+```
+
+The script above uses exiftool to extract the start and end times. Make sure to review the times before proceeding and correct them manually if necessary. All times are in UTC and ISO 8601 format (be careful with time zones). You can input the times manually as follows:
+
+```bash
+python3.10 tpov_truncate.py track.matched.gpx -t [Start time] [End time]
+```
+
+The final processed track will be saved as `track.matched.truncated.gpx`.
+
+## Creating the Video
+
+The following command will use [gopro-dashboard-overlay](https://github.com/CyrilSLi/gopro-dashboard-overlay) and a default template to create a transparent overlay, which then can be combined with the recorded video in a video editor.
+
+This template is tested with the [Noto Sans CJK](https://github.com/googlefonts/noto-cjk/raw/main/Sans/Variable/OTC/NotoSansCJK-VF.otf.ttc) font, however other fonts probably work as well. Replace `NotoSansCJK-VF` with the filepath of the font you want to use.
+
+```bash
+gopro-dashboard.py --use-gpx-only --units-speed kph --font NotoSansCJK-VF --profile overlay --overlay-size 1920x1080 --layout-xml tpov_layout.xml overlay.mov --gpx track.matched.truncated.gpx
+```
+
+If you don't want to further edit the video, you can use the following command instead to combine the overlay with the video (replace `/path/to/video` with the path to your video file):
+
+```bash
+gopro-dashboard.py --use-gpx-only --units-speed kph --font NotoSansCJK-VF --overlay-size 1920x1080 --layout-xml tpov_layout.xml /path/to/video overlay.mp4 --gpx track.matched.truncated.gpx
+```
+
+## Conclusion
+
+You should now have a transit POV video which shows the route on a map, the line number, speed, time, current road, the previous and next stops, transfer information, intersections, and a progress bar. You can further edit the video in a video editor to add music, transitions, etc.
+
+**Please note that the library is still in development and may have bugs. Please report any issues on the [GitHub repository](https://github.com/CyrilSLi/tpov/tree/main).**
