@@ -112,10 +112,13 @@
                         },
                         "use_reference": {
                             "type": "boolean"
+                        },
+                        "distance_format": {
+                            "type": "string"
                         }
                     },
                     "additionalProperties": false,
-                    "required": ["display", "duration", "transfer_separator", "bar_width", "bar_char", "bar_reverse"]
+                    "required": ["display", "duration", "transfer_separator", "bar_width", "bar_char", "bar_reverse", "use_reference", "distance_format"]
                 }
             ]
         }

@@ -356,7 +356,7 @@ def match_gpx (
     return directions, matcher.lattice_best, map_con, visualizer if visualize else None
 
 def SimpleTextDisplay (
-        gpx_len,
+        gpx,
         dirs,
         params,
         stop_indices = [],
@@ -375,8 +375,8 @@ def SimpleTextDisplay (
     stop_data = stop_data.copy () # Do not modify original data
 
     def range_set (start, stop, key, value):
-        nonlocal fields
-        for i in range (max (0, start), stop):
+        nonlocal fields, gpx
+        for i in range (max (0, start), min (stop, len (gpx))):
             fields [i] [key] = value
 
     if stop_indices and stop_data:
@@ -385,7 +385,7 @@ def SimpleTextDisplay (
             "tpov.next_stop": "\u200c",
             "tpov.transfers": "\u200c"
         })
-        fields = tuple ((field.copy () for _ in range (gpx_len)))
+        fields = tuple ((field.copy () for _ in gpx))
         stops = stop_data.pop ("__stops__")
         metadata.update ({f"tpov.{k}": v for k, v in stop_data.items ()})
         for j, i in enumerate (stops):
@@ -395,10 +395,10 @@ def SimpleTextDisplay (
             else:
                 metadata [f"tpov.transfer.{j}"] = "\u200c"
 
-        stop_indices = [min (i + 1, gpx_len) for i in stop_indices] # Use the first point after the stop
+        stop_indices = [i + 1 for i in stop_indices] # Use the first point after the stop
         # Using references in the gpx allows for easier editing but slower processing
         reference = lambda string: string if params ["use_reference"] else metadata [string]
-        for k, (j, i) in enumerate (zip ([0] + stop_indices, stop_indices + [gpx_len])):
+        for k, (j, i) in enumerate (zip ([0] + stop_indices, stop_indices + [len (gpx)])):
             if 0 <= k - 1 < len (stops):
                 range_set (j, i, "tpov.prev_stop", reference (f"tpov.stop.{k - 1}"))
             else:
@@ -416,11 +416,11 @@ def SimpleTextDisplay (
                     if not fields [m] ["tpov.stop_bar"]:
                         fields [m] ["tpov.stop_bar"] = "\u200c" # Do not replace with "-"
     else:
-        fields = tuple ((field.copy () for _ in range (gpx_len)))
+        fields = tuple ((field.copy () for _ in range (len (gpx))))
 
     for j, i in enumerate (dirs):
         # Set current road name for all points in the segment
-        range_set (i [0], dirs [j + 1] [0] if j + 1 < len (dirs) else gpx_len, "tpov.current", i [2])
+        range_set (i [0], dirs [j + 1] [0] if j + 1 < len (dirs) else len (gpx), "tpov.current", i [2])
         if i [6]: # Intersection
             for k, l in zip (("left", "forward", "right"), i [3 : 6]):
                 if k == i [6]:
@@ -432,6 +432,12 @@ def SimpleTextDisplay (
                 else:
                     # Only show the most recent exit for close intersections
                     range_set (i [0] - params ["duration"], i [0], f"tpov.{k}_exit", "\u200c")
+
+    distance = 0
+    for k, (i, j) in enumerate (zip (gpx, gpx [1 : ])):
+        distance += j.distance_2d (i)
+        # Distance is only calculated as kilometers, may change in the future
+        fields [k + 1] ["tpov.distance"] = format (distance / 1000, params ["distance_format"])
 
     return metadata, fields
 
@@ -539,7 +545,7 @@ if __name__ == "__main__":
         gpx = gpxpy.parse (f)
 
     metadata, fields = display (
-        gpx_len = sum (1 for _ in gpx.walk (True)),
+        gpx = tuple (gpx.walk (True)),
         dirs = dirs,
         params = display_params,
         stop_indices = stop_indices,

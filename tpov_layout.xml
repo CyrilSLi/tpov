@@ -2,6 +2,7 @@
 
     <component type="icon" x="0" y="0" file="top_dash.png" size="0" invert="false"/>
     <component type="icon" x="0" y="784" file="bottom_dash.png" size="0" invert="false"/>
+    <component type="icon" x="1644" y="644" file="bottom_info.png" size="0" invert="false"/>
 
     <component type="metric" x="30" y="20" metric="custom.metadata.tpov.route_long_name" size="48" align="la" outline_width="1" outline="255,255,255"/>
     <component type="metric" x="960" y="20" metric="custom.field.tpov.current" size="48" align="ma" outline_width="1" outline="255,255,255"/>
@@ -22,11 +23,18 @@
         </frame>
     </translate>
 
-    <component type="metric" x="910" y="850" metric="custom.field.tpov.prev_stop" size="28" align="ra" outline_width="1" outline="255,255,255"/>
-    <component type="text" x="960" y="835" size="48" align="ma" outline_width="1" outline="255,255,255">&gt;&gt;&gt;</component>
-    <component type="metric" x="1010" y="850" metric="custom.field.tpov.next_stop" size="28" align="la" outline_width="1" outline="255,255,255"/>
+    <component type="metric" x="910" y="840" metric="custom.field.tpov.prev_stop" size="28" align="ra" outline_width="1" outline="255,255,255"/>
+    <component type="text" x="960" y="825" size="48" align="ma" outline_width="1" outline="255,255,255">&gt;&gt;&gt;</component>
+    <component type="metric" x="1010" y="840" metric="custom.field.tpov.next_stop" size="28" align="la" outline_width="1" outline="255,255,255"/>
     <component type="text" x="550" y="902" size="48" align="ra" outline_width="1" outline="255,255,255">Transfers:</component>
     <component type="metric" x="560" y="902" metric="custom.field.tpov.transfers" size="48" align="la" outline_width="1" outline="255,255,255"/>
     <component type="metric" x="960" y="980" metric="custom.field.tpov.stop_bar" size="40" align="ma" outline_width="1" outline="255,255,255"/>
+
+    <component type="icon" x="1654" y="654" file="elevation.png" size="0" invert="true"/>
+    <component type="metric" x="1714" y="656" metric="alt" size="28" align="la" outline_width="1" outline="255,255,255"/>
+    <component type="metric_unit" x="1890" y="656" size="28" align="ra" metric="alt" units="altitude" outline_width="1" outline="255,255,255">{:~c}</component>
+    <component type="icon" x="1654" y="704" file="distance.png" size="0" invert="true"/>
+    <component type="metric" x="1714" y="706" metric="custom.field.tpov.distance" size="28" align="la" outline_width="1" outline="255,255,255"/>
+    <component type="text" x="1890" y="706" size="28" align="ra" outline_width="1" outline="255,255,255">KM</component>
 
 </layout>
