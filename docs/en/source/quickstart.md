@@ -165,6 +165,6 @@ gopro-dashboard.py --use-gpx-only --units-speed kph --font NotoSansCJK-VF --over
 
 ## Conclusion
 
-You should now have a transit POV video that shows the route on a map, the line number, speed, time, current road, the previous and next stops, transfer information, intersections, and a progress bar. You can further edit the video in a video editor to add music, transitions, etc.
+You should now have a transit POV video that shows the route on a map, the line number, speed, time, elevation, distance, current road, the previous and next stops, transfer information, intersections, and a progress bar. You can further edit the video in a video editor to add music, transitions, etc.
 
 **Please note that the library is still in development and may have bugs. Please report any issues on the [GitHub repository](https://github.com/CyrilSLi/tpov/tree/main).**

@@ -167,6 +167,6 @@ gopro-dashboard.py --use-gpx-only --units-speed kph --font NotoSansCJK-VF --over
 
 ## 尾声
 
-您现在有一个显示路线地图、线路编号、速度、时间、当前道路、上/下一站、换乘信息、路口信息于进度条的公交POV视频。您可以在视频编辑器中进一步编辑视频以添加音乐、过渡等。
+您现在有一个显示路线地图、线路编号、速度、时间、海拔、距离、当前道路、上/下一站、换乘信息、路口信息于进度条的公交POV视频。您可以在视频编辑器中进一步编辑视频以添加音乐、过渡等。
 
 **此库仍在开发中，可能存在bug。请在 [GitHub仓库](https://github.com/CyrilSLi/tpov/tree/main) 上汇报任何问题, 谢谢。**
