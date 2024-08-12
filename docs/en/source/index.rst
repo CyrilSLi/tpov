@@ -11,8 +11,6 @@ tpov is a Python package to help with creating \(public\) transportation POV vid
 It supports generating route and intersection information from an OpenStreetMap map file, matching public transportation stops to the recorded track using GTFS_, OpenStreetMap_, or `Baidu Maps`_ data, and exporting the data in a .gpx file with custom extensions.
 
 .. figure:: ../../media/default_layout.png
-   :height: 540px
-   :width: 960px
    :alt: A POV video generated using the default layout
 
    A POV video generated using the default layout

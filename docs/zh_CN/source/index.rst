@@ -11,8 +11,6 @@ tpov是一个用于帮助制作\(公共\)交通pov视频的Python工具包。建
 支持用OpenStreetMap地图文件生成路线与路口信息和用\ GTFS_\ 、\ OpenStreetMap_\ 或\ 百度地图_\ 公交数据将站点与录制的线路匹配, 并将数据导出到带有自定义扩展属性的.gpx文件。
 
 .. figure:: ../../media/default_layout.png
-   :height: 540px
-   :width: 960px
    :alt: 用默认布局生成的POV视频
 
    用默认布局生成的POV视频
