@@ -14,6 +14,7 @@
 
 !tpov_filter.txt
 !match_params.json
+!match_params_zh.json
 !match_schema.json
 !announce_params.json
 !announce_schema.json

@@ -130,10 +130,10 @@ python3.10 tpov_extract.py baidu [SECKEY] ../stop_data.json
 请将GPX文件移动到当前目录并重命名为 `track.gpx`。以下命令会将匹配的数据保存为 `track.matched.gpx`。
 
 ```bash
-python3.10 tpov_match.py ../match_params.json track.gpx --map map.out.o5m --stop ../stop_data.json
+python3.10 tpov_match.py ../match_params_zh.json track.gpx --map map.out.o5m --stop ../stop_data.json
 ```
 
-`match_params.json` 的文档将在以后提供。
+`match_params_zh.json` 的文档将在以后提供。
 
 轨迹需要截断与扩展以匹配视频（将 `/path/to/video` 替换为您录制的视频文件的路径）：
 
