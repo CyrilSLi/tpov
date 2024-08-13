@@ -43,6 +43,6 @@
         "bar_width": 30,
         "bar_char": "█",
         "bar_reverse": true,
-        "use_reference": false,
+        "use_reference": false
     }
 }
