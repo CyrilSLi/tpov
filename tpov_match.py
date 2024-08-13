@@ -433,12 +433,6 @@ def SimpleTextDisplay (
                     # Only show the most recent exit for close intersections
                     range_set (i [0] - params ["duration"], i [0], f"tpov.{k}_exit", "\u200c")
 
-    distance = 0
-    for k, (i, j) in enumerate (zip (gpx, gpx [1 : ])):
-        distance += j.distance_2d (i)
-        # Distance is only calculated as kilometers, may change in the future
-        fields [k + 1] ["tpov.distance"] = format (distance / 1000, params ["distance_format"])
-
     return metadata, fields
 
 def NaiveStopMatcher (gpx_path, stop_data, lattice_best = None, map_con = None):

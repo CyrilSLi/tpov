@@ -154,14 +154,16 @@ The following command will use [gopro-dashboard-overlay](https://github.com/Cyri
 This template is tested with the [Noto Sans CJK](https://github.com/googlefonts/noto-cjk/raw/main/Sans/Variable/OTC/NotoSansCJK-VF.otf.ttc) font, however other fonts probably work as well. Replace `NotoSansCJK-VF` with the filepath of the font you want to use.
 
 ```bash
-gopro-dashboard.py --use-gpx-only --units-speed kph --font NotoSansCJK-VF --profile overlay --overlay-size 1920x1080 --layout-xml ../tpov_layout.xml overlay.mov --gpx track.matched.truncated.gpx
+gopro-dashboard.py --use-gpx-only --units-speed kph --units-altitude m --units-distance km --font NotoSansCJK-VF --profile overlay --overlay-size 1920x1080 --layout-xml ../tpov_layout.xml overlay.mov --gpx track.matched.truncated.gpx
 ```
 
 If you don't want to further edit the video, you can use the following command instead to combine the overlay with the video (replace `/path/to/video` with the path to your video file):
 
 ```bash
-gopro-dashboard.py --use-gpx-only --units-speed kph --font NotoSansCJK-VF --overlay-size 1920x1080 --layout-xml ../tpov_layout.xml /path/to/video overlay.mp4 --gpx track.matched.truncated.gpx
+gopro-dashboard.py --use-gpx-only --units-speed kph --units-altitude m --units-distance km --font NotoSansCJK-VF --overlay-size 1920x1080 --layout-xml ../tpov_layout.xml /path/to/video overlay.mp4 --gpx track.matched.truncated.gpx
 ```
+
+Replace the `kph`, `m`, and `km` arguments with other units if you prefer. A list of available units can be found in the [gopro-dashboard-overlay documentation](https://github.com/time4tea/gopro-dashboard-overlay/tree/main/docs/xml/examples/04-metrics#conversions).
 
 ## Conclusion
 

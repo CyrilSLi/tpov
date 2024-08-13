@@ -31,10 +31,10 @@
     <component type="metric" x="960" y="980" metric="custom.field.tpov.stop_bar" size="40" align="ma" outline_width="1" outline="255,255,255"/>
 
     <component type="icon" x="1654" y="654" file="elevation.png" size="0" invert="true"/>
-    <component type="metric" x="1714" y="656" metric="alt" size="28" align="la" outline_width="1" outline="255,255,255"/>
+    <component type="metric" x="1714" y="656" metric="alt" units="altitude" size="28" align="la" outline_width="1" outline="255,255,255"/>
     <component type="metric_unit" x="1890" y="656" size="28" align="ra" metric="alt" units="altitude" outline_width="1" outline="255,255,255">{:~c}</component>
     <component type="icon" x="1654" y="704" file="distance.png" size="0" invert="true"/>
-    <component type="metric" x="1714" y="706" metric="custom.field.tpov.distance" size="28" align="la" outline_width="1" outline="255,255,255"/>
-    <component type="text" x="1890" y="706" size="28" align="ra" outline_width="1" outline="255,255,255">KM</component>
+    <component type="metric" x="1714" y="706" metric="odo" units="distance" size="28" align="la" outline_width="1" outline="255,255,255"/>
+    <component type="metric_unit" x="1890" y="706" size="28" align="ra" metric="odo" units="distance" outline_width="1" outline="255,255,255">{:~c}</component>
 
 </layout>

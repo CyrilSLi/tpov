@@ -44,6 +44,5 @@
         "bar_char": "█",
         "bar_reverse": true,
         "use_reference": false,
-        "distance_format": ".2f"
     }
 }

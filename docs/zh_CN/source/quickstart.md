@@ -156,14 +156,16 @@ python3.10 tpov_truncate.py track.matched.gpx -t [开头时间] [结尾时间]
 此模板适配 [Noto Sans CJK](https://github.com/googlefonts/noto-cjk/raw/main/Sans/Variable/OTC/NotoSansCJK-VF.otf.ttc) 字体，但其他字体可以适用。请将 `NotoSansCJK-VF` 替换为您想使用的字体的文件路径。
 
 ```bash
-gopro-dashboard.py --use-gpx-only --units-speed kph --font NotoSansCJK-VF --profile overlay --overlay-size 1920x1080 --layout-xml ../tpov_layout_zh.xml overlay.mov --gpx track.matched.truncated.gpx
+gopro-dashboard.py --use-gpx-only --units-speed kph --units-altitude m --units-distance km --font NotoSansCJK-VF --profile overlay --overlay-size 1920x1080 --layout-xml ../tpov_layout_zh.xml overlay.mov --gpx track.matched.truncated.gpx
 ```
 
 如果您不想进一步编辑视频，可替代使用以下命令将叠加与视频合并（将 `/path/to/video` 替换为您录制的视频文件的路径）：
 
 ```bash
-gopro-dashboard.py --use-gpx-only --units-speed kph --font NotoSansCJK-VF --overlay-size 1920x1080 --layout-xml ../tpov_layout_zh.xml /path/to/video overlay.mp4 --gpx track.matched.truncated.gpx
+gopro-dashboard.py --use-gpx-only --units-speed kph --units-altitude m --units-distance km --font NotoSansCJK-VF --overlay-size 1920x1080 --layout-xml ../tpov_layout_zh.xml /path/to/video overlay.mp4 --gpx track.matched.truncated.gpx
 ```
+
+`kph`, `m`, 与 `km` 可被替换为其他单位。在 [gopro-dashboard-overlay 文档 (英文)](https://github.com/time4tea/gopro-dashboard-overlay/tree/main/docs/xml/examples/04-metrics#conversions) 中列举了可选的单位。
 
 ## 尾声
 
