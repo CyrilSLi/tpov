@@ -511,7 +511,7 @@ if __name__ == "__main__":
             hw_priority = hw_priority,
             matcher_params = matcher_params)
     else:
-        dirs, lattice_best = [], []
+        dirs, lattice_best, map_con, visualizer = [], [], None, None
 
     if args.stop:
         with open (args.stop, "r") as f:
