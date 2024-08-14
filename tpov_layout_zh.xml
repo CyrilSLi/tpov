@@ -26,8 +26,8 @@
     <component type="metric" x="910" y="825" metric="custom.field.tpov.prev_stop" size="48" align="ra" outline_width="1" outline="255,255,255"/>
     <component type="text" x="960" y="825" size="48" align="ma" outline_width="1" outline="255,255,255">&gt;&gt;&gt;</component>
     <component type="metric" x="1010" y="825" metric="custom.field.tpov.next_stop" size="48" align="la" outline_width="1" outline="255,255,255"/>
-    <component type="text" x="550" y="902" size="48" align="ra" outline_width="1" outline="255,255,255">换乘线路:</component>
-    <component type="metric" x="560" y="902" metric="custom.field.tpov.transfers" size="48" align="la" outline_width="1" outline="255,255,255"/>
+    <component type="text" x="530" y="902" size="48" align="ra" outline_width="1" outline="255,255,255">换乘线路:</component>
+    <component type="metric" x="540" y="902" metric="custom.field.tpov.transfers" size="48" align="la" outline_width="1" outline="255,255,255"/>
     <component type="metric" x="960" y="980" metric="custom.field.tpov.stop_bar" size="40" align="ma" outline_width="1" outline="255,255,255"/>
 
     <component type="icon" x="1654" y="654" file="elevation.png" size="0" invert="true"/>
