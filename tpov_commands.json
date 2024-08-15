@@ -1,0 +1,13 @@
+{
+    "cmds": [
+        "%tpov_convert $0 %dir/tpov_filter.txt",
+        "%tpov_extract gtfs %dir/.gtfs/$1 %name.json",
+        "%tpov_match %dir/match_personal.json %name.gpx --map $0 --stop $name.json",
+        "%tpov_truncate %name.matched.gpx -e %name.%video",
+        "gopro-dashboard.py --use-gpx-only --units-speed kph --units-altitude m --units-distance km --font NotoSansCJK-VF --profile overlay --overlay-size 1920x1080 --layout-xml %dir/tpov_layout.xml %name_overlay.mov --gpx %name.matched.truncated.gpx"
+    ],
+    "args": [
+        "/home/cyrilli/Projects/tpov/manitoba-latest.osm.pbf",
+        "winnipeg"
+    ]
+}

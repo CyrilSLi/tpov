@@ -106,8 +106,13 @@ def match_gpx (
 
     if not os.path.exists (map_path):
         raise FileNotFoundError ("Could not find map file.")
+    
+    # Test for processed file (.out.o5m) and/or pickled index (.pkl)
+    if os.path.exists (os.path.splitext (map_path) [0] + ".out.o5m"):
+        map_path = os.path.splitext (map_path) [0] + ".out.o5m"
     if os.path.exists (map_path + ".pkl"):
         map_path = map_path + ".pkl"
+
     if os.path.splitext (map_path) [1] == ".pkl":
         with open (map_path, "rb") as f:
             print ("Loading map from pickle... ", end = "", flush = True)
@@ -465,18 +470,17 @@ displays = {
     "SimpleTextDisplay": SimpleTextDisplay
 }
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser (
-        description = "Process intersection and stop data using OSM",
-        formatter_class = argparse.ArgumentDefaultsHelpFormatter,
-        epilog = """""" # TODO: Add epilog
-    )
-    parser.add_argument ("params", help = "Path to JSON parameter file")
-    parser.add_argument ("gpx", help = "Path to .gpx track file")
-    parser.add_argument ("--map", help = "Path to .o5m map file")
-    parser.add_argument ("--stop", metavar = "JSON", help = "Path to stop data")
-    args = parser.parse_args ()
+parser = argparse.ArgumentParser (
+    description = "Process intersection and stop data using OSM",
+    formatter_class = argparse.ArgumentDefaultsHelpFormatter,
+    epilog = """""" # TODO: Add epilog
+)
+parser.add_argument ("params", help = "Path to JSON parameter file")
+parser.add_argument ("gpx", help = "Path to .gpx track file")
+parser.add_argument ("--map", help = "Path to .o5m map file")
+parser.add_argument ("--stop", metavar = "JSON", help = "Path to stop data")
 
+def main (args):
     params = json.load (open (args.params, "r"))
     schema = json.load (open ("match_schema.json", "r"))
     jsonschema.validate (instance = params, schema = schema)
@@ -635,3 +639,10 @@ if __name__ == "__main__":
         print (f"Opening visualization: ", end = "", flush = True)
         t = threading.Thread (target = webbrowser.open_new_tab, args = [f"file://{html_path}"])
         t.start ()
+
+def script (args):
+    import shlex
+    main (parser.parse_args (shlex.split (args)))
+
+if __name__ == "__main__":
+    main (parser.parse_args ())

@@ -13,6 +13,7 @@
 *.html
 
 !tpov_filter.txt
+!tpov_commands.json
 !match_params.json
 !match_params_zh.json
 !match_schema.json

@@ -6,7 +6,8 @@ from tpov_functions import *
 # File formats which osmconvert can read
 osmconvert_formats = (".osm", ".osc", ".osc.gz", ".osh", ".o5m", ".o5c", ".pbf")
 
-def convert (map_file, filter_file):
+def main (args):
+    map_file, filter_file = args.map, args.filter
     try:
         with open (filter_file) as f:
             pass
@@ -37,11 +38,10 @@ def convert (map_file, filter_file):
         os.remove (o5m_file)
         print (f"Deleted temporary file {o5m_file}")
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser (
-        description = "Convert and filter OSM map files for use with tpov_match.py",
-        formatter_class = argparse.RawDescriptionHelpFormatter,
-        epilog = f"""\
+parser = argparse.ArgumentParser (
+    description = "Convert and filter OSM map files for use with tpov_match.py",
+    formatter_class = argparse.RawDescriptionHelpFormatter,
+    epilog = f"""\
 This program and the tpov suite require the tools osmconvert and osmfilter.
 
 Currently supported input file formats:
@@ -51,8 +51,13 @@ The filter file contains a list of osmfilter commands.
 For more information, see https://wiki.openstreetmap.org/wiki/Osmfilter
 A default filter file is provided at "tpov_filter.txt".
 """
-    )
-    parser.add_argument ("map", help = "The OSM map file to convert")
-    parser.add_argument ("filter", help = "The filter file to apply")
-    args = parser.parse_args ()
-    convert (args.map, args.filter)
+)
+parser.add_argument ("map", help = "The OSM map file to convert")
+parser.add_argument ("filter", help = "The filter file to apply")
+
+def script (args):
+    import shlex
+    main (parser.parse_args (shlex.split (args)))
+
+if __name__ == "__main__":
+    main (parser.parse_args ())

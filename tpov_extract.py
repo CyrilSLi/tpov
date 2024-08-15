@@ -439,11 +439,10 @@ sources = {
     "BAIDU": from_baidu
 }
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser (
-        description = "Extract route and stop data from transit data sources",
-        formatter_class = argparse.RawDescriptionHelpFormatter,
-        epilog = """\
+parser = argparse.ArgumentParser (
+    description = "Extract route and stop data from transit data sources",
+    formatter_class = argparse.RawDescriptionHelpFormatter,
+    epilog = """\
 Currently supported data sources and required parameters:
 Source      Parameter       Example
 GTFS        GTFS directory  /path/to/gtfs (unzipped)
@@ -466,14 +465,14 @@ __transfer__        Stop        List of transfers at the stop
 
 Non-core tags may vary and are specific to each data source.
 """
-    )
-    parser.add_argument ("source", help = "Data source to extract from")
-    parser.add_argument ("parameter", help = "Parameter to pass to the data source")
-    parser.add_argument ("output", help = "Output filepath to write extracted data to")
-    parser.add_argument ("-c", "--core-only", action = "store_true", help = "Only save core tags (see below for details)")
-    parser.add_argument ("-t", "--no-transfer", action = "store_false", help = "Exclude the __transfer__ tag")
-    args = parser.parse_args ()
+)
+parser.add_argument ("source", help = "Data source to extract from")
+parser.add_argument ("parameter", help = "Parameter to pass to the data source")
+parser.add_argument ("output", help = "Output filepath to write extracted data to")
+parser.add_argument ("-c", "--core-only", action = "store_true", help = "Only save core tags (see below for details)")
+parser.add_argument ("-t", "--no-transfer", action = "store_false", help = "Exclude the __transfer__ tag")
 
+def main (args):
     try:
         source = sources [args.source.upper ()]
     except KeyError:
@@ -482,3 +481,10 @@ Non-core tags may vary and are specific to each data source.
 
     trip, get_transfer = source (args.parameter, transfer = args.no_transfer)
     sel_stops (trip, open (args.output, "w"), args.core_only, get_transfer)
+
+def script (args):
+    import shlex
+    main (parser.parse_args (shlex.split (args)))
+
+if __name__ == "__main__":
+    main (parser.parse_args ())

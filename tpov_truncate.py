@@ -52,18 +52,17 @@ def truncate (gpx_path, start, end):
         gpx_file.write (gpx.to_xml ())
         print (f"Saved truncated/extended file to", gpx_out)
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser (
-        description = "Truncate/Extend gpx files to match a video",
-        formatter_class = argparse.RawDescriptionHelpFormatter,
-        epilog = """\
+parser = argparse.ArgumentParser (
+    description = "Truncate/Extend gpx files to match a video",
+    formatter_class = argparse.RawDescriptionHelpFormatter,
+    epilog = """\
 """
-    )
-    parser.add_argument ("gpx", help = "The gpx file to truncate or extend")
-    parser.add_argument ("-t", "--time", help = "The start and end time in ISO 8601 format", nargs = 2, metavar = ("START", "END"))
-    parser.add_argument ("-e", "--exiftool", help = "Run exiftool on a video file to get the start and end time", metavar = "VIDEO")
-    args = parser.parse_args ()
+)
+parser.add_argument ("gpx", help = "The gpx file to truncate or extend")
+parser.add_argument ("-t", "--time", help = "The start and end time in ISO 8601 format", nargs = 2, metavar = ("START", "END"))
+parser.add_argument ("-e", "--exiftool", help = "Run exiftool on a video file to get the start and end time", metavar = "VIDEO")
 
+def main (args):
     if args.exiftool:
         exif = subprocess.run (["exiftool", "-DateTimeOriginal", "-ModifyDate", "-Duration#", "-d", "%Y-%m-%dT%H:%M:%SZ", args.exiftool], capture_output = True)
         exif.check_returncode ()
@@ -87,3 +86,10 @@ if __name__ == "__main__":
 
     if input (f"Start time: {start}  End time: {end}\nProceed (Y/n)? ").lower () == "y":
         truncate (args.gpx, start, end)
+
+def script (args):
+    import shlex
+    main (parser.parse_args (shlex.split (args)))
+
+if __name__ == "__main__":
+    main (parser.parse_args ())
