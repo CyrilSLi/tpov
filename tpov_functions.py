@@ -1,7 +1,7 @@
 # This file contains functions used by other programs. It should not be run directly.
 
 # Built-in modules
-import shutil
+import shutil, os
 
 # Third-party modules
 from texttable import Texttable
@@ -79,6 +79,9 @@ def choicetable (header, data):
     for j, i in enumerate (data):
         display.add_row ([j] + list (i))
     print (display.draw ())
+
+def proj_path (file): # Return the path of the file in the project directory
+    return os.path.join (os.path.dirname (os.path.abspath (__file__)), file)
 
 if __name__ == "__main__":
     raise SystemExit ("This file contains functions used by other programs. It should not be run directly.")

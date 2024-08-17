@@ -47,7 +47,7 @@ def truncate (gpx_path, start, end):
         last_seg.points [-1].time = end_time
         print ("Extended the end")
     
-    gpx_out = os.path.abspath (os.path.splitext (args.gpx) [0] + ".truncated.gpx")
+    gpx_out = os.path.abspath (os.path.splitext (gpx_path) [0] + ".truncated.gpx")
     with open (gpx_out, "w") as gpx_file:
         gpx_file.write (gpx.to_xml ())
         print (f"Saved truncated/extended file to", gpx_out)

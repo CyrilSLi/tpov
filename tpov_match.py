@@ -1,5 +1,5 @@
 # Built-in modules:
-import subprocess, struct, pickle, os, math, json, bisect, argparse, shutil, webbrowser, threading
+import subprocess, struct, pickle, os, math, json, bisect, argparse, shutil
 
 # Third-party modules:
 import osmium, gpxpy, jsonschema
@@ -17,6 +17,8 @@ except ImportError:
         import xml.etree.cElementTree as etree
     except ImportError:
         import xml.etree.ElementTree as etree
+
+from tpov_functions import *
 
 class lmmHandler (osmium.SimpleHandler):
     def __init__ (
@@ -51,7 +53,7 @@ class lmmHandler (osmium.SimpleHandler):
 
 # Visualize each intersection and action (e.g. process_divided) in a HTML file with a map background
 class HTMLVisualizer:
-    def __init__ (self, lat, lon, template = "visualization_template.html", combine_duplicates = True):
+    def __init__ (self, lat, lon, template = proj_path ("visualization_template.html"), combine_duplicates = True):
         with open (template, "r") as f:
             self.template = f.read ()
         self.combine_duplicates = combine_duplicates
@@ -73,7 +75,7 @@ class HTMLVisualizer:
             self.uids.add (uid)
     def add_point (self, lat, lon):
         self.points.append ([lat, lon])
-    def write (self, path = "visualization.html"):
+    def write (self, path = proj_path ("visualization.html")):
         page = self.template
         for i, j in self.replacements.items ():
             page = page.replace (i, j ())
@@ -98,7 +100,7 @@ def match_gpx (
         gpx = gpxpy.parse (f)
         points = tuple (gpx.walk (True))
     if visualize:
-        if not os.path.exists ("visualization_template.html"):
+        if not os.path.exists (proj_path ("visualization_template.html")):
             raise FileNotFoundError ("Could not find visualization_template.html.")
         bounds = gpx.get_bounds ()
         visualizer = HTMLVisualizer (bounds.min_latitude + (bounds.max_latitude - bounds.min_latitude) / 2,
@@ -107,9 +109,9 @@ def match_gpx (
     if not os.path.exists (map_path):
         raise FileNotFoundError ("Could not find map file.")
     
-    # Test for processed file (.out.o5m) and/or pickled index (.pkl)
-    if os.path.exists (os.path.splitext (map_path) [0] + ".out.o5m"):
-        map_path = os.path.splitext (map_path) [0] + ".out.o5m"
+    # Test for processed file (.filtered.o5m) and/or pickled index (.pkl)
+    if os.path.exists (os.path.splitext (map_path) [0] + ".filtered.o5m"):
+        map_path = os.path.splitext (map_path) [0] + ".filtered.o5m"
     if os.path.exists (map_path + ".pkl"):
         map_path = map_path + ".pkl"
 
@@ -482,7 +484,7 @@ parser.add_argument ("--stop", metavar = "JSON", help = "Path to stop data")
 
 def main (args):
     params = json.load (open (args.params, "r"))
-    schema = json.load (open ("match_schema.json", "r"))
+    schema = json.load (open (proj_path ("match_schema.json"), "r"))
     jsonschema.validate (instance = params, schema = schema)
 
     map_matcher = map_matchers [params ["map_matcher"]]
@@ -628,7 +630,7 @@ def main (args):
         print ("Saved data to", gpx_out)
     
     if visualizer:
-        html_path = os.path.abspath ("visualization.html")
+        html_path = os.path.abspath (proj_path ("visualization.html"))
         fp = next (gpx.walk (True))
         visualizer.add_marker (object (), fp.latitude, fp.longitude, f"<b>Origin</b><br>Latitude: {fp.latitude}<br>Longitude: {fp.longitude}")
         for i in gpx.walk (True):
@@ -636,9 +638,7 @@ def main (args):
             visualizer.add_point (i.latitude, i.longitude)
         visualizer.add_marker (object (), lp.latitude, lp.longitude, f"<b>Destination</b><br>Latitude: {lp.latitude}<br>Longitude: {lp.longitude}")
         visualizer.write (html_path)
-        print (f"Opening visualization: ", end = "", flush = True)
-        t = threading.Thread (target = webbrowser.open_new_tab, args = [f"file://{html_path}"])
-        t.start ()
+        print (f"Visit file://{html_path} in a browser to view the visualization.")
 
 def script (args):
     import shlex

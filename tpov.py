@@ -28,7 +28,7 @@ with open (args.commands, "r") as f:
     if "%video" in cmds:
         p_video = True
     else:
-        p_video = Null # Variable not needed
+        p_video = "" # Variable not needed
 
 # p_{name} variables are set as %{name} in the commands file
 # %video matches any video file (determined using the 'file' command)
@@ -60,13 +60,19 @@ for j, i in enumerate (args):
     if f"${j}" in cmds:
         cmds = cmds.replace (f"${j}", i)
 cmds = json.loads (cmds) ["cmds"]
+choicetable (["Commands"], ((i, ) for i in cmds))
+cmds = choice (cmds, "Choose commands to run: ", 1)
 
 for i in cmds:
-    if i.startswith ("%tpov_"):
+    print (f"Running command {i}")
+    if i.startswith ("tpov_"):
         try:
-            tpov_commands [i.split () [0] [6 : ]] (i.split (None, 1) [1])
+            tpov_commands [i.split () [0] [5 : ]] (i.split (None, 1) [1])
         except Exception as e:
-            print (f"Error running command {i [1 : ]}")
+            print (f"Error running command {i}")
+            raise e
+        except SystemExit as e:
+            print (f"Command {i} exited.")
             raise e
     else:
         cmd = subprocess.run (shlex.split (i), stdout = sys.stdout, stderr = sys.stderr)
