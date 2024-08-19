@@ -98,15 +98,6 @@
                         "transfer_separator": {
                             "type": "string"
                         },
-                        "bar_width": {
-                            "type": "integer",
-                            "minimum": 1
-                        },
-                        "bar_char": {
-                            "type": "string",
-                            "minLength": 1,
-                            "maxLength": 1
-                        },
                         "bar_reverse": {
                             "type": "boolean"
                         },
@@ -115,7 +106,7 @@
                         }
                     },
                     "additionalProperties": false,
-                    "required": ["display", "duration", "transfer_separator", "bar_width", "bar_char", "bar_reverse", "use_reference"]
+                    "required": ["display", "duration", "transfer_separator", "bar_reverse", "use_reference"]
                 }
             ]
         }

@@ -419,13 +419,12 @@ def SimpleTextDisplay (
                 range_set (j, i, "tpov.next_stop", "\u200c")
                 range_set (j, i, "tpov.transfers", "\u200c")
             
-            if params ["bar_width"] and params ["bar_char"]: # TODO: Replace with stop_bar
-                if params ["bar_reverse"]:
-                    for m in range (j, i):
-                        fields [m] ["tpov.stop_bar"] = str ((i - 1 - m) / (i - 1 - j))
-                else:
-                    for m in range (j, i):
-                        fields [m] ["tpov.stop_bar"] = str ((m - j) / (i - 1 - j))
+            if params ["bar_reverse"]:
+                for m in range (j, i):
+                    fields [m] ["tpov.stop_bar"] = str ((i - 1 - m) / (i - 1 - j))
+            else:
+                for m in range (j, i):
+                    fields [m] ["tpov.stop_bar"] = str ((m - j) / (i - 1 - j))
     else:
         fields = tuple ((field.copy () for _ in range (len (gpx))))
 
