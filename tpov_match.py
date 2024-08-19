@@ -377,10 +377,12 @@ def SimpleTextDisplay (
         "tpov.left_exit": "\u200c",
         "tpov.forward_exit": "\u200c",
         "tpov.right_exit": "\u200c",
+        "tpov.inter_dash": "0"
     }
     fields, metadata = None, {}
     stop_data = stop_data.copy () # Do not modify original data
 
+    point = lambda i: gpx [max (0, min (i, len (gpx) - 1))]
     def range_set (start, stop, key, value):
         nonlocal fields, gpx
         for i in range (max (0, start), min (stop, len (gpx))):
@@ -416,12 +418,14 @@ def SimpleTextDisplay (
             else:
                 range_set (j, i, "tpov.next_stop", "\u200c")
                 range_set (j, i, "tpov.transfers", "\u200c")
-            if params ["bar_width"] and params ["bar_char"]:
-                for m in range (j, i):
-                    chars = min (math.floor ((params ["bar_width"] + 1) / (i - j) * (m - j + 1)), params ["bar_width"])
-                    fields [m] ["tpov.stop_bar"] = params ["bar_char"] * (params ["bar_width"] - chars if params ["bar_reverse"] else chars)
-                    if not fields [m] ["tpov.stop_bar"]:
-                        fields [m] ["tpov.stop_bar"] = "\u200c" # Do not replace with "-"
+            
+            if params ["bar_width"] and params ["bar_char"]: # TODO: Replace with stop_bar
+                if params ["bar_reverse"]:
+                    for m in range (j, i):
+                        fields [m] ["tpov.stop_bar"] = str ((i - 1 - m) / (i - 1 - j))
+                else:
+                    for m in range (j, i):
+                        fields [m] ["tpov.stop_bar"] = str ((m - j) / (i - 1 - j))
     else:
         fields = tuple ((field.copy () for _ in range (len (gpx))))
 
@@ -439,6 +443,7 @@ def SimpleTextDisplay (
                 else:
                     # Only show the most recent exit for close intersections
                     range_set (i [0] - params ["duration"], i [0], f"tpov.{k}_exit", "\u200c")
+                range_set (i [0] - params ["duration"], i [0], "tpov.inter_dash", "1") # Display transparent overlay
 
     return metadata, fields
 

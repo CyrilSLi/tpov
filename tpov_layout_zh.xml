@@ -1,6 +1,9 @@
 <layout>
 
     <component type="icon" x="0" y="0" file="top_dash.png" size="0" invert="false"/>
+    <translate x="0" y="120">
+        <component type="bar" metric="custom.field.tpov.inter_dash" units="custom.float" min="0" max="1" width="1920" height="60" bar="0,0,0,128" fill="0,0,0,0" outline="0,0,0,0" zero="0,0,0,0" align_center="true"/>
+    </translate>
     <component type="icon" x="0" y="784" file="bottom_dash.png" size="0" invert="false"/>
     <component type="icon" x="1644" y="644" file="bottom_info.png" size="0" invert="false"/>
 
@@ -17,7 +20,7 @@
 
     <component type="metric_unit" x="148" y="820" align="ma" metric="speed" units="speed" size="48" outline_width="1" outline="255,255,255">{:~c}</component>
     <component type="metric" x="148" y="850" align="ma" metric="speed" units="speed" dp="0" size="160" outline_width="1" outline="255,255,255"/>
-    <translate x="1644" y="804" name="moving_journey_map">
+    <translate x="1644" y="804">
         <frame width="256" height="256" bg="0,0,0,128" cr="35">
             <component type="moving_journey_map" zoom="15" />
         </frame>
@@ -28,7 +31,9 @@
     <component type="metric" x="1010" y="825" metric="custom.field.tpov.next_stop" size="48" align="la" outline_width="1" outline="255,255,255"/>
     <component type="text" x="530" y="902" size="48" align="ra" outline_width="1" outline="255,255,255">换乘线路:</component>
     <component type="metric" x="540" y="902" metric="custom.field.tpov.transfers" size="48" align="la" outline_width="1" outline="255,255,255"/>
-    <component type="metric" x="960" y="980" metric="custom.field.tpov.stop_bar" size="40" align="ma" outline_width="1" outline="255,255,255"/>
+    <translate x="316" y="995">
+        <component type="bar" metric="custom.field.tpov.stop_bar" units="custom.float" min="0" max="1" width="1288" height="32" bar="255,255,255" fill="0,0,0,0" outline="0,0,0,0" zero="0,0,0,0" align_center="true"/>
+    </translate>
 
     <component type="icon" x="1654" y="654" file="elevation.png" size="0" invert="true"/>
     <component type="metric" x="1714" y="656" metric="alt" units="altitude" size="28" align="la" outline_width="1" outline="255,255,255"/>
