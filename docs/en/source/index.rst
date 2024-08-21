@@ -25,6 +25,7 @@ It supports generating route and intersection information from an OpenStreetMap 
    :caption: Contents:
 
    quickstart
+   troubleshooting
 
 Indices and tables
 ==================

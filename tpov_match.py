@@ -168,7 +168,7 @@ def match_gpx (
             visualizer.add_marker (node, lat, lon, template.format (title = title, node = node, lat = lat, lon = lon, info = info))
 
     def divided_process (case, dest, orig, orig_id = None, orig_angle = None):
-        # Return true if exit should be ignored, false otherwise
+        # Return true if action should be taken (e.g. ignore exit, add exit), false otherwise
         nonlocal directions, map_con, tags, process_divided, matcher, default_name, visualize, add_marker
         for i in ("length", "angle", "same_name", "apply_filter"):
             if i not in process_divided:
@@ -244,7 +244,58 @@ def match_gpx (
                     add_marker (orig, {"Name": dest_name, "Angle": angle_diff, "Length": dist}, "process_divided (2)")
                     return True
 
-        raise NotImplementedError ("Divided road processing for case {case} not implemented.")
+        elif case == 3: # Case 3: Add exit to [directions] for a far turn (e.g. left in right-hand traffic) onto a divided road
+            dest_angle = math.degrees (math.atan2 (map_con.graph [dest] [0] [1] - map_con.graph [orig] [0] [1],
+                                                   map_con.graph [dest] [0] [0] - map_con.graph [orig] [0] [0]))
+            dest_name = tags [tags [struct.pack ("<Q", orig) + struct.pack ("<Q", dest)]].get ("name", default_name)
+            prev = directions [-1] [1] # Previous intersection node
+
+            # If straight-line distance is larger than threshold, no need to check individual segments
+            rough_dist = gpxpy.geo.Location (map_con.graph [orig] [0] [1], map_con.graph [orig] [0] [0]).distance_2d (
+                         gpxpy.geo.Location (map_con.graph [prev] [0] [1], map_con.graph [prev] [0] [0]))
+            if rough_dist > process_divided ["length"]:
+                return False # Too far to be a divided road
+
+            dist, last_node = 0, prev
+            for i in matcher.lattice_best [directions [-1] [0] : ]:
+                if i.edge_m.l2 != last_node:
+                    dist += gpxpy.geo.Location (map_con.graph [i.edge_m.l2] [0] [1], map_con.graph [i.edge_m.l2] [0] [0]).distance_2d (
+                            gpxpy.geo.Location (map_con.graph [last_node] [0] [1], map_con.graph [last_node] [0] [0]))
+                    if dist > process_divided ["length"]:
+                        return False
+                    last_node = i.edge_m.l2
+                if i.edge_m.l2 == orig:
+                    break
+
+            for i in map_con.graph [prev] [1]:
+                prev2 = matcher.lattice_best [directions [-1] [0] - 1].edge_m.l1 # Previous road
+                prev_l2 = matcher.lattice_best [directions [-1] [0]].edge_m.l2 # Next node of previous intersection
+                if i in (orig, prev2, prev_l2):
+                    continue # Skip matched roads
+                prev_name = tags [tags [struct.pack ("<Q", prev) + struct.pack ("<Q", i)]].get ("name", default_name)
+                if process_divided ["same_name"] and prev_name != dest_name:
+                    continue
+
+                orig_angle = math.degrees (math.atan2 (map_con.graph [prev_l2] [0] [1] - map_con.graph [prev] [0] [1],
+                                                       map_con.graph [prev_l2] [0] [0] - map_con.graph [prev] [0] [0]))
+                prev2 = matcher.lattice_best [directions [-1] [0] - 1].edge_m.l1 # Previous road
+                prev_angle = (math.degrees (math.atan2 (map_con.graph [prev] [0] [1] - map_con.graph [prev2] [0] [1],
+                                                        map_con.graph [prev] [0] [0] - map_con.graph [prev2] [0] [0])) - orig_angle) % 360
+                prev_angle = 180 - abs (180 - prev_angle)
+                if prev_angle > process_divided ["angle"]:
+                    continue # Skip if not an intersection (zigzag i -> prev -> orig -> dest) (may need to adjust angle threshold)
+
+                angle = (math.degrees (math.atan2 (map_con.graph [prev] [0] [1] - map_con.graph [i] [0] [1],
+                                                   map_con.graph [prev] [0] [0] - map_con.graph [i] [0] [0])) - dest_angle) % 360
+                angle = 180 - abs (180 - angle)
+                if angle > process_divided ["angle"]:
+                    continue
+                print (f"process_divided (3): Adding {prev_name} {prev} -> {i} with angles {prev_angle:4f}, {angle:.4f} and length {dist:.4f}")
+                add_marker (orig, {"Name": prev_name, "Prev_Angle": prev_angle, "Angle": angle, "Length": dist}, "process_divided (3)")
+                return prev_name
+            return False
+
+        raise NotImplementedError (f"Divided road processing for case {case} not implemented.")
     link_until = (None, -1) # (name, last index of link road)
     def link_follow (index, way): # Return the name of the destination road
         nonlocal matcher, tags, default_name, link_until, follow_link, add_marker
@@ -298,14 +349,25 @@ def match_gpx (
                 if orig_id == tags [struct.pack ("<Q", orig) + struct.pack ("<Q", dest)]:
                     min_angle = angle # The same road is always treated as forward
                 exits.append ((angle, way))
+                last_dest = dest
 
             if len (exits) == 0:
                 print (f"Warning: No exits found at node {orig}")
                 continue # Skip if no exits
             elif len (exits) == 1:
+                dirs = None
                 if last_name != exit_name: # Road name change
-                    directions.append ((j + 1, orig, exit_name, "", "", "", ""))
+                    dirs = (j + 1, orig, exit_name, "", "", "", "")
                     last_name = exit_name
+                name = divided_process (3, last_dest, orig)
+                if process_divided and name:
+                    if exits [0] [0] > forward_angle: # T-junction right
+                        dirs = (j + 1, orig, last_name, "", "", name, "right")
+                    elif exits [0] [0] < -forward_angle: # T-junction left
+                        dirs = (j + 1, orig, last_name, name, "", "", "left")
+                    # No need to indicate straight exit
+                if dirs:
+                    directions.append (dirs)
                 continue
             last_name = exit_name
             if follow_link:

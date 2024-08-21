@@ -25,6 +25,7 @@ tpov是一个用于帮助制作\(公共\)交通pov视频的Python工具包。建
    :caption: 目录:
 
    quickstart
+   troubleshooting
 
 索引
 ==================
