@@ -54,7 +54,7 @@
 
 ## gopro-dashboard-overlay
 
-此库为被 fork 并与 `tpov` 适配的一个独立的项目。请参阅[其文档 (英文)]("https://github.com/CyrilSLi/gopro-dashboard-overlay/tree/main/docs")，并如需在那里提交一个问题。
+此库为被 fork 并与 `tpov` 适配的一个独立的项目。请参阅[其文档 (英文)](https://github.com/CyrilSLi/gopro-dashboard-overlay/tree/main/docs)，并如需在那里提交一个问题。
 
 ## 其他
 

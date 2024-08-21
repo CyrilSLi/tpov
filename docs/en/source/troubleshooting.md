@@ -54,7 +54,7 @@ Please refer to the section for the data source you are using.
 
 ## gopro-dashboard-overlay
 
-This is a separate project that has been forked and adapted for use with `tpov`. Please refer to [its documentation]("https://github.com/CyrilSLi/gopro-dashboard-overlay/tree/main/docs") for troubleshooting, and open an issue there if necessary.
+This is a separate project that has been forked and adapted for use with `tpov`. Please refer to [its documentation](https://github.com/CyrilSLi/gopro-dashboard-overlay/tree/main/docs) for troubleshooting, and open an issue there if necessary.
 
 ## Other
 
