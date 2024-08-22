@@ -20,10 +20,11 @@ parser = argparse.ArgumentParser (
     formatter_class = argparse.RawDescriptionHelpFormatter,
     epilog = """"""
 )
-parser.add_argument ("commands", help = "A JSON file containing commands and arguments")
 args = parser.parse_args ()
 
-with open (args.commands, "r") as f:
+if not os.path.exists (proj_path ("tpov_commands.json")):
+    raise FileNotFoundError ("Commands file not found")
+with open (proj_path ("tpov_commands.json"), "r") as f:
     cmds = f.read ()
     if "%video" in cmds:
         p_video = True
