@@ -53,7 +53,7 @@ class lmmHandler (osmium.SimpleHandler):
 
 # Visualize each intersection and action (e.g. process_divided) in a HTML file with a map background
 class HTMLVisualizer:
-    def __init__ (self, lat, lon, template = proj_path ("visualization_template.html"), combine_duplicates = True):
+    def __init__ (self, lat, lon, template, combine_duplicates = True):
         with open (template, "r") as f:
             self.template = f.read ()
         self.combine_duplicates = combine_duplicates
@@ -94,17 +94,19 @@ def match_gpx (
     process_divided = None, # Divided road processing parameters
     visualize = False, # Visualize intersections and actions in HTML
     hw_priority = {}, # Priority for highway types, default is 0
-    matcher_params = {}): # Matcher parameters
+    matcher_params = {}, # Matcher parameters
+    visu_template = ""): # Visualization template file
 
     with open (gpx_path, "r") as f:
         gpx = gpxpy.parse (f)
         points = tuple (gpx.walk (True))
     if visualize:
-        if not os.path.exists (proj_path ("visualization_template.html")):
-            raise FileNotFoundError ("Could not find visualization_template.html.")
+        if not os.path.exists (proj_path (visu_template)):
+            raise FileNotFoundError (f"Could not find {visu_template}")
         bounds = gpx.get_bounds ()
         visualizer = HTMLVisualizer (bounds.min_latitude + (bounds.max_latitude - bounds.min_latitude) / 2,
-                                     bounds.min_longitude + (bounds.max_longitude - bounds.min_longitude) / 2)
+                                     bounds.min_longitude + (bounds.max_longitude - bounds.min_longitude) / 2,
+                                     proj_path (visu_template))
 
     if not os.path.exists (map_path):
         raise FileNotFoundError ("Could not find map file.")
@@ -567,6 +569,7 @@ def main (args):
     matcher_params = params ["matcher_params"]
     display_params = params ["display_params"]
     display = displays [display_params ["display"]]
+    visu_template = params ["visu_template"]
 
     if args.map:
         dirs, lattice_best, map_con, visualizer = match_gpx (
@@ -581,7 +584,8 @@ def main (args):
             process_divided = process_divided,
             visualize = visualize,
             hw_priority = hw_priority,
-            matcher_params = matcher_params)
+            matcher_params = matcher_params,
+            visu_template = visu_template)
     else:
         dirs, lattice_best, map_con, visualizer = [], [], None, None
 

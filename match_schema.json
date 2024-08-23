@@ -109,8 +109,11 @@
                     "required": ["display", "duration", "transfer_separator", "bar_reverse", "use_reference"]
                 }
             ]
+        },
+        "visu_template": {
+            "type": "string"
         }
     },
     "additionalProperties": false,
-    "minProperties": 13
+    "minProperties": 14
 }

@@ -42,5 +42,6 @@
         "transfer_separator": " ",
         "bar_reverse": true,
         "use_reference": false
-    }
+    },
+    "visu_template": "visualization_template.html"
 }
