@@ -34,21 +34,27 @@ def from_gtfs (gtfs_dir = None, transfer = True):
         raise ValueError ("GTFS directory cannot be empty.")
     orig = os.getcwd () # Save original working directory
     os.chdir (gtfs_dir)
-    route_name = input ("Enter the route short_name or long_name: ").lower ()
-    if not route_name:
-        raise ValueError ("Route name cannot be empty.")
 
     with open ("agency.txt") as f:
         agency = tuple (csv.DictReader (f))
         if len (agency) > 1:
-            raise NotImplementedError ("Multiple agencies in agency.txt not supported.")
-        agency = agency [0]
+            choicetable (
+                ["Name", "URL"],
+                ([i ["agency_name"], i ["agency_url"]] for i in agency)
+            )
+            agency = next (choice (agency, "Select one transit agency: ", 1, 1))
+        else:
+            agency = agency [0]
+    
+    route_name = input ("Enter the route short_name or long_name: ").lower ()
+    if not route_name:
+        raise ValueError ("Route name cannot be empty.")
 
     print ("Searching for route...")
     route, route_names = None, {}
     with open ("routes.txt") as f:
         for i in csv.DictReader (f):
-            if route_name in (i ["route_short_name"].lower (), i ["route_long_name"].lower ()):
+            if route_name in (i ["route_short_name"].lower (), i ["route_long_name"].lower ()) and ("agency_id" not in i or i ["agency_id"] == agency ["agency_id"]):
                 route = i
             route_names [i ["route_id"]] = i ["route_short_name"] if i ["route_short_name"] else i ["route_long_name"]
     if not route:
