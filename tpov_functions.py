@@ -85,7 +85,7 @@ def choicetable (header, data):
 def proj_path (file): # Return the path of the file in the project directory
     return os.path.join (os.path.dirname (os.path.abspath (__file__)), file)
 
-def video_time (file): # Use exiftool to get the start and end timestamps of a video
+def video_time (file, return_object = False): # Use exiftool to get the start and end timestamps of a video
     exif = subprocess.run (["exiftool", "-DateTimeOriginal", "-ModifyDate", "-Duration#", "-d", "%Y-%m-%dT%H:%M:%SZ", file], capture_output = True)
     exif.check_returncode ()
     exif = {i.split (":", 1) [0].strip (): i.split (":", 1) [1].strip () for i in exif.stdout.decode ().split ("\n") if i}
@@ -101,6 +101,9 @@ def video_time (file): # Use exiftool to get the start and end timestamps of a v
         start = (dateutil.parser.isoparse (end) - timedelta (seconds = round (float (exif ["Duration"])))).isoformat ().replace ("+00:00", "Z")
     else:
         raise ValueError ("Start or end time not found in exiftool output")
+    
+    if return_object:
+        return dateutil.parser.isoparse (start), dateutil.parser.isoparse (end) # A bit redundant, can be cleaned up
     return start, end
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
 # Built-in modules:
 import os, bisect, json, csv, argparse, pickle, subprocess, re
 from urllib.parse import urlparse
+from zoneinfo import ZoneInfo
 
 from tpov_functions import *
 
@@ -122,7 +123,12 @@ def from_gtfs (gtfs_dir = None, transfer = True):
                 j ["departure_time"] = ("0" + j ["departure_time"].strip ()) [-8 : ]
                 i.setdefault ("__stops__", []).append (j)
 
-    start_time = input ("Enter the time the vehicle left the first stop in HH(:mm)(:ss) format: ")
+    start_time = input ("Enter the time the vehicle left the first stop in HH(:mm)(:ss) format, or a path to the recording video: ")
+    if os.path.exists (start_time):
+        start, _ = video_time (start_time, True) # Return datetime object
+        start_time = start.astimezone (ZoneInfo (agency ["agency_timezone"])).strftime ("%H:%M:%S")
+        print (f"Extracted start time from video: {start_time}")
+
     # Sort by departure_time of first stop
     trip_ids.sort (key = lambda x: x ["__stops__"] [0] ["departure_time"])
 
