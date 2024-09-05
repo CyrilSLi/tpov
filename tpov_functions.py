@@ -1,10 +1,12 @@
 # This file contains functions used by other programs. It should not be run directly.
 
 # Built-in modules
-import shutil, os
+import shutil, os, subprocess
+from datetime import datetime, timedelta
 
 # Third-party modules
 from texttable import Texttable
+import dateutil.parser
 
 def renamedict (d, assignments: dict):
     return type (d) ((assignments.get (k, k), v) for k, v in d.items ())
@@ -82,6 +84,24 @@ def choicetable (header, data):
 
 def proj_path (file): # Return the path of the file in the project directory
     return os.path.join (os.path.dirname (os.path.abspath (__file__)), file)
+
+def video_time (file): # Use exiftool to get the start and end timestamps of a video
+    exif = subprocess.run (["exiftool", "-DateTimeOriginal", "-ModifyDate", "-Duration#", "-d", "%Y-%m-%dT%H:%M:%SZ", file], capture_output = True)
+    exif.check_returncode ()
+    exif = {i.split (":", 1) [0].strip (): i.split (":", 1) [1].strip () for i in exif.stdout.decode ().split ("\n") if i}
+
+    # Try to guess how the start and end time are stored in the exif data
+    if "Duration" not in exif:
+        raise ValueError ("Duration not found in exiftool output")
+    if "Date/Time Original" in exif:
+        start = exif ["Date/Time Original"]
+        end = (dateutil.parser.isoparse (start) + timedelta (seconds = round (float (exif ["Duration"])))).isoformat ().replace ("+00:00", "Z")
+    elif "Modify Date" in exif:
+        end = exif ["Modify Date"]
+        start = (dateutil.parser.isoparse (end) - timedelta (seconds = round (float (exif ["Duration"])))).isoformat ().replace ("+00:00", "Z")
+    else:
+        raise ValueError ("Start or end time not found in exiftool output")
+    return start, end
 
 if __name__ == "__main__":
     raise SystemExit ("This file contains functions used by other programs. It should not be run directly.")

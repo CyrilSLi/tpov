@@ -1,9 +1,10 @@
 # Built-in modules
-import os, argparse, copy, subprocess
-from datetime import datetime, timedelta
+import os, argparse, copy
 
 # Third-party modules
-import gpxpy, dateutil.parser
+import gpxpy
+
+from tpov_functions import *
 
 # Truncates or extend a gpx file to match a start and end time
 def truncate (gpx_path, start, end):
@@ -64,21 +65,7 @@ parser.add_argument ("-e", "--exiftool", help = "Run exiftool on a video file to
 
 def main (args):
     if args.exiftool:
-        exif = subprocess.run (["exiftool", "-DateTimeOriginal", "-ModifyDate", "-Duration#", "-d", "%Y-%m-%dT%H:%M:%SZ", args.exiftool], capture_output = True)
-        exif.check_returncode ()
-        exif = {i.split (":", 1) [0].strip (): i.split (":", 1) [1].strip () for i in exif.stdout.decode ().split ("\n") if i}
-
-        # Try to guess how the start and end time are stored in the exif data
-        if "Duration" not in exif:
-            raise ValueError ("Duration not found in exiftool output")
-        if "Date/Time Original" in exif:
-            start = exif ["Date/Time Original"]
-            end = (dateutil.parser.isoparse (start) + timedelta (seconds = round (float (exif ["Duration"])))).isoformat ().replace ("+00:00", "Z")
-        elif "Modify Date" in exif:
-            end = exif ["Modify Date"]
-            start = (dateutil.parser.isoparse (end) - timedelta (seconds = round (float (exif ["Duration"])))).isoformat ().replace ("+00:00", "Z")
-        else:
-            raise ValueError ("Start or end time not found in exiftool output")
+        start, end = video_time (args.exiftool)
     elif args.time:
         start, end = args.time
     else:
