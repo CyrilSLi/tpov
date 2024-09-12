@@ -85,8 +85,11 @@ def choicetable (header, data):
 def proj_path (file): # Return the path of the file in the project directory
     return os.path.join (os.path.dirname (os.path.abspath (__file__)), file)
 
+def iso_time (time): # Convert a datetime object to an ISO 8601 string
+    return time.isoformat ().replace ("+00:00", "Z")
+
 def video_time (file, return_object = False): # Use exiftool to get the start and end timestamps of a video
-    exif = subprocess.run (["exiftool", "-DateTimeOriginal", "-ModifyDate", "-Duration#", "-d", "%Y-%m-%dT%H:%M:%SZ", file], capture_output = True)
+    exif = subprocess.run (["exiftool", "-api", "largefilesupport=1", "-DateTimeOriginal", "-ModifyDate", "-Duration#", "-d", "%Y-%m-%dT%H:%M:%SZ", file], capture_output = True)
     exif.check_returncode ()
     exif = {i.split (":", 1) [0].strip (): i.split (":", 1) [1].strip () for i in exif.stdout.decode ().split ("\n") if i}
 
@@ -95,16 +98,20 @@ def video_time (file, return_object = False): # Use exiftool to get the start an
         raise ValueError ("Duration not found in exiftool output")
     if "Date/Time Original" in exif:
         start = exif ["Date/Time Original"]
-        end = (dateutil.parser.isoparse (start) + timedelta (seconds = round (float (exif ["Duration"])))).isoformat ().replace ("+00:00", "Z")
+        end = iso_time (dateutil.parser.isoparse (start) + timedelta (seconds = round (float (exif ["Duration"]))))
     elif "Modify Date" in exif:
         end = exif ["Modify Date"]
-        start = (dateutil.parser.isoparse (end) - timedelta (seconds = round (float (exif ["Duration"])))).isoformat ().replace ("+00:00", "Z")
+        start = iso_time (dateutil.parser.isoparse (end) - timedelta (seconds = round (float (exif ["Duration"]))))
     else:
         raise ValueError ("Start or end time not found in exiftool output")
     
     if return_object:
         return dateutil.parser.isoparse (start), dateutil.parser.isoparse (end) # A bit redundant, can be cleaned up
     return start, end
+
+def set_video_time (file, start, end): # Use exiftool to set the start and end timestamps of a video
+    exif = subprocess.run (["exiftool", "-api", "largefilesupport=1", "-overwrite_original", "-DateTimeOriginal=" + start, "-FileModifyDate=" + start, "-ModifyDate=" + end, file])
+    exif.check_returncode ()
 
 if __name__ == "__main__":
     raise SystemExit ("This file contains functions used by other programs. It should not be run directly.")
