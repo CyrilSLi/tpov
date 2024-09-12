@@ -57,6 +57,15 @@ parser = argparse.ArgumentParser (
     description = "Truncate/Extend gpx files to match a video",
     formatter_class = argparse.RawDescriptionHelpFormatter,
     epilog = """\
+This program truncates and/or extends a gpx file to match the start and end time of a video.
+This is useful to line the recorded video up with the overlay created by tpov_match.py.
+
+Not all videos have the required metadata to determine the start and end time.
+In such cases, manually specify the time using the -t option followed by two ISO 8601 timestamps.
+See https://tpov.readthedocs.io/en/latest/ for more information on the metadata required.
+
+Usually, transferring the video using an online service will not preserve the timestamp metadata.
+Directly copying the video (e.g. using a USB cable) is recommended.
 """
 )
 parser.add_argument ("gpx", help = "The gpx file to truncate or extend")

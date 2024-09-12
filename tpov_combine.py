@@ -10,7 +10,19 @@ parser = argparse.ArgumentParser (
     description = "Fill gaps between recorded segments with still videos",
     formatter_class = argparse.RawDescriptionHelpFormatter,
     epilog = """\
-""" # TODO: Add epilog
+This program combines multiple video segments into a single video.
+This can be used when recording accidentally stops or when it is split into multiple files.
+The output will have the start time of the first segment and the end time of the last segment.
+
+--- WARNING ---
+  The video segments must have exactly the same streams. This program does not check for compatibility.
+  Segments should normally be fine if they were recorded with the same camera and settings.
+  See https://trac.ffmpeg.org/wiki/Concatenate#demuxer for more information.
+--- WARNING ---
+
+Not all videos have the required metadata to determine the start and end time.
+See https://tpov.readthedocs.io/en/latest/ for the metadata required and what to do if it is missing.
+"""
 )
 parser.add_argument ("output", help = "Output directory")
 parser.add_argument ("segment", nargs = "+", help = "List of video segments to combine")
