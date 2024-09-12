@@ -44,6 +44,16 @@
 
 - `NaiveStopMatcher failed to match stops. Try using a different matcher.` - NaiveStopMatcher 是目前唯一的站点匹配器，它只简单的将停靠点匹配到轨迹上离它最近的点。这在环线或其他重叠路线上很可能会失败。请[提交一个问题](#其他)，并如果您有解决方案请考虑为此项目做出贡献。
 
+## tpov_combine.py
+
+- `Duration not found in exiftool output` - 同下
+
+- `Start or end time not found in exiftool output` - 同下
+
+- `Video segments [...] and [...] overlap or are out of order` - 第二个视频片段的开始时间不在第一个视频片段结束时间之后。请检查提供的参数的顺序。
+
+- `Video segment [...] has a negative duration` - 视频开始时间在结束时间以前。使用 `exiftool` 或 `ffprobe` 等工具检查视频文件是否损坏。如果您认为这是一个 bug，请[提交一个问题](#其他)。
+
 ## tpov_truncate.py
 
 - `Duration not found in exiftool output` - 您的视频文件不包含用来推断开始和结束时间的元数据。这可能由使用过在线服务传输视频导致。请参考[入门教程](quickstart.md#匹配与截断GPS轨迹)手动输入时间。
@@ -58,4 +68,4 @@
 
 ## 其他
 
-如果您遇到此处未列出的问题或需要进一步帮助，请在[GitHub 仓库](https://github.com/CyrilSLi/tpov)上提交一个问题。请提供尽可能多的细节，**并包括报错输出、运行的命令、您的 GPX 文件与配置文件（例如** `match_params.json`**）**。
+如果您遇到此处未列出的问题或需要进一步帮助，请在[GitHub 仓库](https://github.com/CyrilSLi/tpov)上提交一个问题。请提供尽可能多的细节，**并包括报错输出、运行的命令、您的 GPX 文件、视频元数据（如需）与配置文件（例如** `match_params.json`**）**。

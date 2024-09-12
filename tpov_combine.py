@@ -61,7 +61,7 @@ def main (args):
         elif i [1] < i [0]:
             print (
                 f"Video segment {segments [k]} has a negative duration."
-                "Check the video using 'exiftoo', 'ffprobe', or similar tools."
+                "Check the video using 'exiftool', 'ffprobe', or similar tools."
                 "Please report this issue to GitHub if you believe it is a bug."
                 f'Start -> End timestamps: {iso_time (i [0])} -> {iso_time (i [1])}'
             )

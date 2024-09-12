@@ -44,6 +44,16 @@ Please refer to the section for the data source you are using.
 
 - `NaiveStopMatcher failed to match stops. Try using a different matcher.` - NaiveStopMatcher is currently the only stop matcher available, and matches stops simply to the nearest point on the track. This is expected to fail on looping or otherwise overlapping routes. Please [open an issue](#other), and if you have a solution, consider contributing to the project.
 
+## tpov_combine.py
+
+- `Duration not found in exiftool output` - See below
+
+- `Start or end time not found in exiftool output` - See below
+
+- `Video segments [...] and [...] overlap or are out of order` - The second segment does not begin after the first segment ends. Check the order of the arguments provided.
+
+- `Video segment [...] has a negative duration` - Verify that the video is not corrupted using tools such as `exiftool` or `ffprobe`. If you believe that this is a bug, please [open an issue](#other).
+
 ## tpov_truncate.py
 
 - `Duration not found in exiftool output` - Your video file does not contain the necessary metadata to infer the start and end times. This can happen if you use an online service to transfer the video. Refer to the [Quickstart](quickstart.md#matching-and-truncating-the-gps-track) for manual input of the times.
@@ -58,4 +68,4 @@ This is a separate project that has been forked and adapted for use with `tpov`.
 
 ## Other
 
-If you encounter an issue not listed here or need further assistance, please open an issue on the [GitHub repository](https://github.com/CyrilSLi/tpov). Provide as much detail as possible, **including the error message, the command you ran, your GPX file, and configuation files (e.g.** `match_params.json`**)**.
+If you encounter an issue not listed here or need further assistance, please open an issue on the [GitHub repository](https://github.com/CyrilSLi/tpov). Provide as much detail as possible, **including the error message, the command you ran, your GPX file, video metadata (if applicable), and configuation files (e.g.** `match_params.json`**)**.
