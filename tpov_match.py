@@ -169,7 +169,7 @@ def match_gpx (
             info = "<br>".join (f"{k}: {v}" for k, v in info.items ())
             visualizer.add_marker (node, lat, lon, template.format (title = title, node = node, lat = lat, lon = lon, info = info))
 
-    def divided_process (case, dest, orig, orig_id = None, orig_angle = None):
+    def divided_process (case, dest, orig, *, orig_id = None, orig_angle = None, lattice_index = None):
         # Return true if action should be taken (e.g. ignore exit, add exit), false otherwise
         nonlocal directions, map_con, tags, process_divided, matcher, default_name, visualize, add_marker
         for i in ("length", "angle", "same_name", "apply_filter", "enabled_cases"):
@@ -179,6 +179,9 @@ def match_gpx (
             return False
 
         if case == 1: # Case 1: Ignore short spur which leads to the opposite side of the divided road
+            if orig_id is None or orig_angle is None:
+                raise ValueError ("process_divided: orig_id and orig_angle must be provided for case 1")
+
             dist = gpxpy.geo.Location (map_con.graph [dest] [0] [1], map_con.graph [dest] [0] [0]).distance_2d (
                    gpxpy.geo.Location (map_con.graph [orig] [0] [1], map_con.graph [orig] [0] [0]))
             visited = [orig] # Visited nodes to ignore backtracking
@@ -302,6 +305,56 @@ def match_gpx (
                 return prev_name
             return False
 
+        elif case == 4: # Case 4: Ignore "intersection" when a divided road merges back into a two-way road
+            if lattice_index is None:
+                raise ValueError ("process_divided: lattice_index must be provided for case 4")
+
+            prev = matcher.lattice_best [lattice_index].edge_m.l1 # Previous path node (may be not an intersection)
+            dest_name = tags [tags [struct.pack ("<Q", orig) + struct.pack ("<Q", dest)]].get ("name", default_name)
+            orig_name = tags [tags [struct.pack ("<Q", prev) + struct.pack ("<Q", orig)]].get ("name", default_name)
+            if process_divided ["same_name"] and orig_name != dest_name: # Two sides of the divided road have different names
+                return False
+            
+            path_dest = matcher.lattice_best [lattice_index + 1].edge_m.l2 # Next path node after orig
+            if path_dest not in map_con.graph [orig] [1] or orig not in map_con.graph [path_dest] [1]:
+                return False # orig -> path_dest not a two-way road
+
+            if len (map_con.graph [dest] [1]) > 1: # dest -> dest2 not a one-way road with no intersections
+                return False
+            dest2 = map_con.graph [dest] [1] [0] # Next path node after dest (may be not an intersection)
+            if dest2 == orig: # dest -> dest2 is a two-way dead-end
+                return False
+
+            for i in matcher.lattice_best [lattice_index : : -1]:
+                if i.edge_m.l2 == prev:
+                    break
+            prev2 = i.edge_m.l1 # Second previous path node
+            if prev2 == orig: # U-turn at prev
+                return False
+            if len (map_con.graph [prev] [1]) > 1: # prev -> orig not a one-way road with no intersections
+                return False
+            
+            prev_angle = (math.degrees (math.atan2 (map_con.graph [prev] [0] [1] - map_con.graph [prev2] [0] [1],
+                                                    map_con.graph [prev] [0] [0] - map_con.graph [prev2] [0] [0])))
+            dest_angle = (math.degrees (math.atan2 (map_con.graph [dest2] [0] [1] - map_con.graph [dest] [0] [1],
+                                                    map_con.graph [dest2] [0] [0] - map_con.graph [dest] [0] [0])) - prev_angle) % 360
+            angle_diff = abs (180 - dest_angle) # Angle difference between two sides of the divided road
+            if angle_diff > process_divided ["angle"]: # TODO: choose a more appropriate angle threshold
+                pass # return False
+            
+            dist = gpxpy.geo.Location (map_con.graph [prev] [0] [1], map_con.graph [prev] [0] [0]).distance_2d (
+                   gpxpy.geo.Location (map_con.graph [dest] [0] [1], map_con.graph [dest] [0] [0]))
+            dist2 = gpxpy.geo.Location (map_con.graph [prev2] [0] [1], map_con.graph [prev2] [0] [0]).distance_2d (
+                    gpxpy.geo.Location (map_con.graph [dest2] [0] [1], map_con.graph [dest2] [0] [0]))
+            if dist > process_divided ["length"] and dist2 > process_divided ["length"]:
+                # Sample two node distances, not a divided road if both are too far
+                # May need a more sophisticated method to determine divided road (e.g. linear algebra)
+                return False 
+
+            print (f"process_divided (4): Ignoring {dest_name} {orig} -> {dest} with angle {angle_diff:.4f} and distance {dist:.4f} {dist2:.4f}")
+            add_marker (orig, {"Name": dest_name, "Angle": angle_diff, "Distance": dist, "Distance2": dist2}, "process_divided (4)")
+            return True
+
         raise NotImplementedError (f"Divided road processing for case {case} not implemented.")
     link_until = (None, -1) # (name, last index of link road)
     def link_follow (index, way): # Return the name of the destination road
@@ -339,9 +392,11 @@ def match_gpx (
                 elif not (exit_filter (way) or dest == i.edge_m.l2):
                     continue # Use filter to exclude certain exits not leading to the next road
                 elif process_divided and dest != i.edge_m.l2:
-                    if divided_process (1, dest, orig, orig_id, orig_angle):
+                    if divided_process (1, dest, orig, orig_id = orig_id, orig_angle = orig_angle):
                         continue
                     elif divided_process (2, dest, orig):
+                        continue
+                    elif divided_process (4, dest, orig, lattice_index = j):
                         continue
 
                 angle = (math.degrees (math.atan2 (map_con.graph [dest] [0] [1] - map_con.graph [orig] [0] [1],
