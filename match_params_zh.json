@@ -11,7 +11,8 @@
         "angle": 10,
         "length": 50,
         "same_name": true,
-        "apply_filter": true
+        "apply_filter": true,
+        "enabled_cases": [1, 2, 3, 4]
     },
     "visualize": true,
     "hw_priority": {

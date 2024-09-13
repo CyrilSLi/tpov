@@ -58,10 +58,20 @@
                         },
                         "apply_filter": {
                             "type": "boolean"
+                        },
+                        "enabled_cases": {
+                            "type": "array",
+                            "items": {
+                                "type": "integer",
+                                "enum": [1, 2, 3, 4]
+                            },
+                            "uniqueItems": true,
+                            "minItems": 1,
+                            "maxItems": 4
                         }
                     },
                     "additionalProperties": false,
-                    "required": ["angle", "length", "same_name", "apply_filter"]
+                    "required": ["angle", "length", "same_name", "apply_filter", "enabled_cases"]
                 },
                 {
                     "type": "boolean",

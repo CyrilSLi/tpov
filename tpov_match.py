@@ -172,9 +172,11 @@ def match_gpx (
     def divided_process (case, dest, orig, orig_id = None, orig_angle = None):
         # Return true if action should be taken (e.g. ignore exit, add exit), false otherwise
         nonlocal directions, map_con, tags, process_divided, matcher, default_name, visualize, add_marker
-        for i in ("length", "angle", "same_name", "apply_filter"):
+        for i in ("length", "angle", "same_name", "apply_filter", "enabled_cases"):
             if i not in process_divided:
                 raise KeyError (f"process_divided: Missing parameter '{i}'")
+        if case not in process_divided ["enabled_cases"]:
+            return False
 
         if case == 1: # Case 1: Ignore short spur which leads to the opposite side of the divided road
             dist = gpxpy.geo.Location (map_con.graph [dest] [0] [1], map_con.graph [dest] [0] [0]).distance_2d (
@@ -189,7 +191,7 @@ def match_gpx (
                     way = tags [tags [struct.pack ("<Q", dest) + struct.pack ("<Q", j)]]
                     if not process_divided ["apply_filter"] or exit_filter (way):
                         exits.append (j)
-                if len (exits) != 1:
+                if len (exits) != 1: # Not a spur which just leads to the opposite side
                     break
 
                 orig, dest = dest, exits [0] # Move to next node
@@ -198,7 +200,6 @@ def match_gpx (
                 angle = (math.degrees (math.atan2 (map_con.graph [dest] [0] [1] - map_con.graph [orig] [0] [1],
                                                    map_con.graph [dest] [0] [0] - map_con.graph [orig] [0] [0])) - orig_angle) % 360
                 angle_diff = abs (180 - angle)
-                #print (way.get ("name", default_name), angle_diff, dist, orig, dest)
                 if angle_diff <= process_divided ["angle"]:
                     if not process_divided ["same_name"] or tags [orig_id].get ("name", default_name) == name:
                         print (f"process_divided (1): Ignoring {', '.join (names)} {visited [0]} -> {orig} with angle {angle_diff:.4f} and length {dist:.4f}")
@@ -245,12 +246,27 @@ def match_gpx (
                     print (f"process_divided (2): Ignoring {dest_name} {orig} -> {dest} with angle {angle_diff:.4f} and length {dist:.4f}")
                     add_marker (orig, {"Name": dest_name, "Angle": angle_diff, "Length": dist}, "process_divided (2)")
                     return True
+            print ("process_divided (2): Distance calculation reached the end of the path. Please report this error.")
+            return False # Should not reach here
 
         elif case == 3: # Case 3: Add exit to [directions] for a far turn (e.g. left in right-hand traffic) onto a divided road
             dest_angle = math.degrees (math.atan2 (map_con.graph [dest] [0] [1] - map_con.graph [orig] [0] [1],
                                                    map_con.graph [dest] [0] [0] - map_con.graph [orig] [0] [0]))
             dest_name = tags [tags [struct.pack ("<Q", orig) + struct.pack ("<Q", dest)]].get ("name", default_name)
             prev = directions [-1] [1] # Previous intersection node
+            prev2 = matcher.lattice_best [directions [-1] [0] - 1].edge_m.l1 # Previous road
+            prev_l2 = matcher.lattice_best [directions [-1] [0]].edge_m.l2 # Next node of previous intersection
+
+            orig_angle = math.degrees (math.atan2 (map_con.graph [prev_l2] [0] [1] - map_con.graph [prev] [0] [1],
+                                                   map_con.graph [prev_l2] [0] [0] - map_con.graph [prev] [0] [0]))
+            if abs (dest_angle - orig_angle) < process_divided ["angle"]: # Usually caused by backtracking of a two-way road becoming divided
+                return False
+
+            prev_angle = (math.degrees (math.atan2 (map_con.graph [prev] [0] [1] - map_con.graph [prev2] [0] [1],
+                                                    map_con.graph [prev] [0] [0] - map_con.graph [prev2] [0] [0])) - orig_angle) % 360
+            prev_angle = 180 - abs (180 - prev_angle)
+            if prev_angle > process_divided ["angle"]:
+                return False # Side road bend too sharp, usually caused by backtracking of a two-way road (may need to adjust angle threshold)
 
             # If straight-line distance is larger than threshold, no need to check individual segments
             rough_dist = gpxpy.geo.Location (map_con.graph [orig] [0] [1], map_con.graph [orig] [0] [0]).distance_2d (
@@ -270,22 +286,11 @@ def match_gpx (
                     break
 
             for i in map_con.graph [prev] [1]:
-                prev2 = matcher.lattice_best [directions [-1] [0] - 1].edge_m.l1 # Previous road
-                prev_l2 = matcher.lattice_best [directions [-1] [0]].edge_m.l2 # Next node of previous intersection
                 if i in (orig, prev2, prev_l2):
                     continue # Skip matched roads
                 prev_name = tags [tags [struct.pack ("<Q", prev) + struct.pack ("<Q", i)]].get ("name", default_name)
                 if process_divided ["same_name"] and prev_name != dest_name:
                     continue
-
-                orig_angle = math.degrees (math.atan2 (map_con.graph [prev_l2] [0] [1] - map_con.graph [prev] [0] [1],
-                                                       map_con.graph [prev_l2] [0] [0] - map_con.graph [prev] [0] [0]))
-                prev2 = matcher.lattice_best [directions [-1] [0] - 1].edge_m.l1 # Previous road
-                prev_angle = (math.degrees (math.atan2 (map_con.graph [prev] [0] [1] - map_con.graph [prev2] [0] [1],
-                                                        map_con.graph [prev] [0] [0] - map_con.graph [prev2] [0] [0])) - orig_angle) % 360
-                prev_angle = 180 - abs (180 - prev_angle)
-                if prev_angle > process_divided ["angle"]:
-                    continue # Skip if not an intersection (zigzag i -> prev -> orig -> dest) (may need to adjust angle threshold)
 
                 angle = (math.degrees (math.atan2 (map_con.graph [prev] [0] [1] - map_con.graph [i] [0] [1],
                                                    map_con.graph [prev] [0] [0] - map_con.graph [i] [0] [0])) - dest_angle) % 360
@@ -365,11 +370,15 @@ def match_gpx (
                 if process_divided and name:
                     if exits [0] [0] > forward_angle: # T-junction right
                         dirs = (j + 1, orig, last_name, "", "", name, "right")
+                        exit_dir = "right"
                     elif exits [0] [0] < -forward_angle: # T-junction left
                         dirs = (j + 1, orig, last_name, name, "", "", "left")
+                        exit_dir = "left"
                     # No need to indicate straight exit
                 if dirs:
                     directions.append (dirs)
+                    if name: # Indicate process_divided (3) result
+                        add_marker (orig, {"Current": last_name, "Left": dirs [3], "Forward": dirs [4], "Right": dirs [5], "Exit": exit_dir}, "Intersection")
                 continue
             last_name = exit_name
             if follow_link:
