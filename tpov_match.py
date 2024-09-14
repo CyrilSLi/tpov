@@ -309,15 +309,16 @@ def match_gpx (
             if lattice_index is None:
                 raise ValueError ("process_divided: lattice_index must be provided for case 4")
 
-            prev = matcher.lattice_best [lattice_index].edge_m.l1 # Previous path node (may be not an intersection)
-            dest_name = tags [tags [struct.pack ("<Q", orig) + struct.pack ("<Q", dest)]].get ("name", default_name)
-            orig_name = tags [tags [struct.pack ("<Q", prev) + struct.pack ("<Q", orig)]].get ("name", default_name)
-            if process_divided ["same_name"] and orig_name != dest_name: # Two sides of the divided road have different names
-                return False
-            
             path_dest = matcher.lattice_best [lattice_index + 1].edge_m.l2 # Next path node after orig
             if path_dest not in map_con.graph [orig] [1] or orig not in map_con.graph [path_dest] [1]:
                 return False # orig -> path_dest not a two-way road
+
+            prev = matcher.lattice_best [lattice_index].edge_m.l1 # Previous path node (may be not an intersection)
+            dest_name = tags [tags [struct.pack ("<Q", orig) + struct.pack ("<Q", dest)]].get ("name", default_name)
+            orig_name = tags [tags [struct.pack ("<Q", prev) + struct.pack ("<Q", orig)]].get ("name", default_name)
+            path_name = tags [tags [struct.pack ("<Q", orig) + struct.pack ("<Q", path_dest)]].get ("name", default_name)
+            if process_divided ["same_name"] and (orig_name != dest_name or orig_name != path_name): # Two sides of the divided road have different names
+                return False
 
             exits = []
             for i in map_con.graph [dest] [1]:
@@ -445,7 +446,8 @@ def match_gpx (
                     elif exits [0] [0] < -forward_angle: # T-junction left
                         dirs = (j + 1, orig, last_name, name, "", "", "left")
                         exit_dir = "left"
-                    # No need to indicate straight exit
+                    else:
+                        name = False # No need to indicate straight exit
                 if dirs:
                     directions.append (dirs)
                     if name: # Indicate process_divided (3) result
