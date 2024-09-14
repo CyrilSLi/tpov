@@ -319,11 +319,16 @@ def match_gpx (
             if path_dest not in map_con.graph [orig] [1] or orig not in map_con.graph [path_dest] [1]:
                 return False # orig -> path_dest not a two-way road
 
-            if len (map_con.graph [dest] [1]) > 1: # dest -> dest2 not a one-way road with no intersections
+            exits = []
+            for i in map_con.graph [dest] [1]:
+                if i == orig:
+                    return False # dest is a two-way road
+                way = tags [tags [struct.pack ("<Q", dest) + struct.pack ("<Q", i)]]
+                if not process_divided ["apply_filter"] or exit_filter (way):
+                    exits.append (i)
+            if len (exits) > 1: # dest -> dest2 not a one-way road with no intersections 
                 return False
-            dest2 = map_con.graph [dest] [1] [0] # Next path node after dest (may be not an intersection)
-            if dest2 == orig: # dest -> dest2 is a two-way dead-end
-                return False
+            dest2 = exits [0] # Next path node after dest (may be not an intersection)
 
             for i in matcher.lattice_best [lattice_index : : -1]:
                 if i.edge_m.l2 == prev:
@@ -331,9 +336,20 @@ def match_gpx (
             prev2 = i.edge_m.l1 # Second previous path node
             if prev2 == orig: # U-turn at prev
                 return False
-            if len (map_con.graph [prev] [1]) > 1: # prev -> orig not a one-way road with no intersections
-                return False
             
+            exits = []
+            for i in map_con.graph [prev] [1]:
+                if i == prev2:
+                    return False # prev is a two-way road
+                way = tags [tags [struct.pack ("<Q", prev) + struct.pack ("<Q", i)]]
+                if not process_divided ["apply_filter"] or exit_filter (way):
+                    exits.append (i)
+            if len (exits) > 1: # prev -> orig not a one-way road with no intersections
+                return False
+            elif exits != [orig]: # Should not reach here
+                print (f"process_divided (4): Only exit from prev {prev} is not orig {orig}. Please report this error.")
+                return False
+
             prev_angle = (math.degrees (math.atan2 (map_con.graph [prev] [0] [1] - map_con.graph [prev2] [0] [1],
                                                     map_con.graph [prev] [0] [0] - map_con.graph [prev2] [0] [0])))
             dest_angle = (math.degrees (math.atan2 (map_con.graph [dest2] [0] [1] - map_con.graph [dest] [0] [1],
