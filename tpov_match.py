@@ -625,7 +625,7 @@ displays = {
 parser = argparse.ArgumentParser (
     description = "Process intersection and stop data using OSM",
     formatter_class = argparse.ArgumentDefaultsHelpFormatter,
-    epilog = """""" # TODO: Add epilog
+    epilog = """"""
 )
 parser.add_argument ("params", help = "Path to JSON parameter file")
 parser.add_argument ("gpx", help = "Path to .gpx track file")
