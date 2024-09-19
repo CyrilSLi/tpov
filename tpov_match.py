@@ -260,6 +260,9 @@ def match_gpx (
             prev2 = matcher.lattice_best [directions [-1] [0] - 1].edge_m.l1 # Previous road
             prev_l2 = matcher.lattice_best [directions [-1] [0]].edge_m.l2 # Next node of previous intersection
 
+            if len ({prev2, prev, orig, dest}) != 4: # Skip if any node is repeated (e.g. backtracking of a two-way road)
+                return False
+
             orig_angle = math.degrees (math.atan2 (map_con.graph [prev_l2] [0] [1] - map_con.graph [prev] [0] [1],
                                                    map_con.graph [prev_l2] [0] [0] - map_con.graph [prev] [0] [0]))
             if abs (dest_angle - orig_angle) < process_divided ["angle"]: # Usually caused by backtracking of a two-way road becoming divided
