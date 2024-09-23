@@ -5,7 +5,7 @@
 *.o5m
 *.pbf
 *.mp4
-*.mp4
+*.mov
 *.pkl
 *.xml
 *.zip
@@ -20,5 +20,6 @@
 !announce_params.json
 !announce_schema.json
 !visualization_template.html
+!visualization_template_zh.html
 !tpov_layout.xml
 !tpov_layout_zh.xml
