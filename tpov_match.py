@@ -1,5 +1,5 @@
 # Built-in modules:
-import subprocess, struct, pickle, os, math, json, bisect, argparse, shutil
+import subprocess, struct, pickle, os, sys, math, json, bisect, argparse, shutil
 
 # Third-party modules:
 import osmium, gpxpy, jsonschema
@@ -108,6 +108,15 @@ def match_gpx (
                                      bounds.min_longitude + (bounds.max_longitude - bounds.min_longitude) / 2,
                                      proj_path (visu_template))
 
+    # Add a dict of information about a node into a marker
+    def add_marker (node, info, title = "Marker"):
+        if visualize:
+            nonlocal visualizer, map_con
+            template = "<b>{title}</b><br>Node ID: {node}<br>Latitude: {lat}<br>Longitude: {lon}<br>{info}"
+            lat, lon = map_con.graph [node] [0]
+            info = "<br>".join (f"{k}: {v}" for k, v in info.items ())
+            visualizer.add_marker (node, lat, lon, template.format (title = title, node = node, lat = lat, lon = lon, info = info))
+
     if not os.path.exists (map_path):
         raise FileNotFoundError ("Could not find map file.")
     
@@ -148,8 +157,12 @@ def match_gpx (
         if input (
             f"Not all points were matched. Last matched {last_l1} -> {last_l2} at ({map_con.graph [last_l1] [0] [1]}, {map_con.graph [last_l1] [0] [0]})."
             "\nThis may be fixed by increasing max_dist and/or max_dist_init in the matcher parameters."
+            "\nIn certain cases truncating the beginning of the GPX file may help, which can be done with this command:"
+            f"\n{sys.executable} {proj_path ('tpov_truncate.py')} {gpx_path} -t {iso_time (points [lastidx + 1].time)} {iso_time (points [-1].time)}"
             "\nContinue processing (Y/n)? ").lower () != "y":
             raise SystemExit ("Processing cancelled.")
+        add_marker (last_l1, {"Last Matched Way": f"{last_l1} -> {last_l2}"}, "Last Matched Node")
+
     for i, j in zip (matcher.lattice_best, matcher.lattice_best [1 : ]):
         if not (i.edge_m.l1 == j.edge_m.l1 and i.edge_m.l2 == j.edge_m.l2) and i.edge_m.l2 != j.edge_m.l1:
             raise NotImplementedError (f"Path discontinuity at ({i.edge_m.l1}, {i.edge_m.l2}) -> ({j.edge_m.l1}, {j.edge_m.l2})")
@@ -160,21 +173,9 @@ def match_gpx (
     # [gpx index, intersection node, current name, left name, forward name, right name, exit direction]
     directions = [(0, matcher.lattice_best [0].edge_m.l1, exit_name, "", "", "", "")]
 
-    # Add a dict of information about a node into a marker
-    def add_marker (node, info, title = "Marker"):
-        if visualize:
-            nonlocal visualizer, map_con
-            template = "<b>{title}</b><br>Node ID: {node}<br>Latitude: {lat}<br>Longitude: {lon}<br>{info}"
-            lat, lon = map_con.graph [node] [0]
-            info = "<br>".join (f"{k}: {v}" for k, v in info.items ())
-            visualizer.add_marker (node, lat, lon, template.format (title = title, node = node, lat = lat, lon = lon, info = info))
-
     def divided_process (case, dest, orig, *, orig_id = None, orig_angle = None, lattice_index = None):
         # Return true if action should be taken (e.g. ignore exit, add exit), false otherwise
         nonlocal directions, map_con, tags, process_divided, matcher, default_name, visualize, add_marker
-        for i in ("length", "angle", "same_name", "apply_filter", "enabled_cases"):
-            if i not in process_divided:
-                raise KeyError (f"process_divided: Missing parameter '{i}'")
         if case not in process_divided ["enabled_cases"]:
             return False
 
@@ -568,7 +569,9 @@ def SimpleTextDisplay (
                 range_set (j, i, "tpov.next_stop", "\u200c")
                 range_set (j, i, "tpov.transfers", "\u200c")
             
-            if params ["bar_reverse"]:
+            if i == j + 1: # Single point between stops
+                fields [j] ["tpov.stop_bar"] = "0" # No stop bar
+            elif params ["bar_reverse"]:
                 for m in range (j, i):
                     fields [m] ["tpov.stop_bar"] = str ((i - 1 - m) / (i - 1 - j))
             else:
@@ -600,19 +603,72 @@ def NaiveStopMatcher (gpx_path, stop_data, lattice_best = None, map_con = None):
     # It is known to fail with lines which visit geographically close stops multiple times.
     # A better implementation would be to use a map-matching algorithm on the stop data.
     # That is why lattice_best and map_con are included as arguments, but they are not used in this function.
-    def sq_dist (stop, point):
-        dx = float (stop ["stop_lon"]) - point.longitude
-        dy = (float (stop ["stop_lat"]) - point.latitude) * math.cos (math.radians (point.latitude)) # Latitude correction
-        return dx * dx + dy * dy
+
     with open (gpx_path, "r") as f:
         gpx = gpxpy.parse (f)
         points = tuple (gpx.walk (True))
 
-    indices = [min (range (len (points)), key = lambda x: sq_dist (i, points [x])) for i in stop_data ["__stops__"]]
+    indices = [
+        min (range (len (points)),
+        key = lambda x: points [x].distance_2d (gpxpy.geo.Location (float (i ["stop_lat"]), float (i ["stop_lon"])))) 
+        for i in stop_data ["__stops__"]]
+
     if indices != sorted (indices):
-        raise SystemExit ("NaiveStopMatcher failed to match stops. Try using a different matcher.")
+        raise SystemExit ("NaiveStopMatcher failed to match stops. Try using a different stop matcher.")
     print (f"NaiveStopMatcher: Matched {len (indices)} stops successfully.")
     return indices
+
+def gpx_snap (gpx, map_con, lattice_best, distance):
+    # This is a simple function which snaps GPX points to the nearest point on the matched path.
+    # It tries to snap a point to its matched path segment, and `distance` segments ahead and behind.
+    # It chooses the segment which results in the smallest distance between the original and snapped points.
+    # References: https://stackoverflow.com/a/6853926, gpxpy.geo.Location.distance
+
+    def intersection (point, y1, x1, y2, x2): # Returns matched point and distance from original point
+        y, x = point.latitude, point.longitude
+        scale = math.cos (math.radians (y2)) # Latitude correction (assume spherical Earth)
+        y, y1, y2 = y * scale, y1 * scale, y2 * scale
+
+        a, b, c, d = x - x1, y - y1, x2 - x1, y2 - y1
+        dot, len_sq = a * c + b * d, c * c + d * d
+        if len_sq == 0: # Zero-length segment
+            param = -1 # Use (x1, y1) as closest point
+        else:
+            param = dot / len_sq
+
+        if param < 0: # Closest point in segment is (x1, y1)
+            xx, yy = x1, y1 / scale
+        elif param > 1: # Closest point in segment is (x2, y2)
+            xx, yy = x2, y2 / scale
+        else: # Closest point is on the segment
+            xx, yy = x1 + param * c, (y1 + param * d) / scale
+        
+        return yy, xx, gpxpy.geo.Location (yy, xx).distance_2d (point)
+
+    segments, k = [lattice_best [0].edge_m], 1
+    seg_equal = lambda i, j: i.l1 == j.l1 and i.l2 == j.l2
+    def inc_k ():
+        nonlocal k, segments, lattice_best
+        if k >= len (lattice_best):
+            return True
+        if not seg_equal (lattice_best [k].edge_m, segments [-1]):
+            segments.append (lattice_best [k].edge_m)
+        k += 1
+        return False
+
+    while len (segments) < distance + 1:
+        if inc_k ():
+            return # Matched path is too short to snap
+
+    for i, j in zip (gpx.walk (True), (i.edge_m for i in lattice_best)):
+        while not seg_equal (segments [- distance - 1], j):
+            if inc_k ():
+                break
+        while len (segments) > distance * 2 + 1:
+            segments.pop (0)
+        
+        snaps = tuple (intersection (i, *map_con.graph [k.l1] [0], *map_con.graph [k.l2] [0]) for k in segments)
+        i.latitude, i.longitude, _ = min (snaps, key = lambda x: x [2])
 
 map_matchers = {
     "SimpleMatcher": SimpleMatcher,
@@ -712,63 +768,8 @@ def main (args):
     if stop_data:
         for i in stop_data ["__stops__"]:
             gpx.waypoints.append (gpxpy.gpx.GPXWaypoint (latitude = i ["stop_lat"], longitude = i ["stop_lon"], name = i ["stop_name"]))
-    if False and snap_gpx: # Snap GPX points to the nearest road # TODO: Fix snapping
-        def intersection (y1, x1, y2, x2, y3, x3):
-            if x1 == x2: # Vertical line
-                return y3, x1
-            if y1 == y2: # Horizontal line
-                return y1, x3
-
-            scale = math.cos (math.radians (y3)) # Latitude correction
-            y1, y2, y3 = y1 * scale, y2 * scale, y3 * scale
-
-            angle2 = math.atan2 (x2 - x1, y2 - y1)
-            angle3 = math.atan2 (x3 - x1, y3 - y1)
-            angle312 = angle3 - angle2
-            #print (angle312)
-            dist12 = ((y2 - y1) ** 2 + (x2 - x1) ** 2) ** 0.5
-            dist13 = ((y3 - y1) ** 2 + (x3 - x1) ** 2) ** 0.5
-            dist14 = math.cos (angle312) * dist13
-            x4 = x1 + (x2 - x1) * dist14 / dist12
-            y4 = y1 + (y2 - y1) * dist14 / dist12
-
-            #print ((y4 - y1) / (x4 - x1), (y2 - y1) / (x2 - x1))
-            #assert (y4 - y1) / (x4 - x1) == (y2 - y1) / (x2 - x1) # Check if the point is on the line
-
-            return y4 / scale, x4
-
-            slope, inv_slope = (y2 - y1) / (x2 - x1), -(x2 - x1) / (y2 - y1)
-            intercept, inv_intercept = y1 - slope * x1, y3 - inv_slope * x3
-            x4 = (inv_intercept - intercept) / (slope - inv_slope)
-            y4 = slope * x4 + intercept
-
-            return y4 / scale, x4
-
-        l1, l2, k = lattice_best [0].edge_m.l1, lattice_best [0].edge_m.l2, 0
-        for i, j in zip (gpx.walk (True), lattice_best):
-            """ #path_points = (lattice_best [0].edge_m.l1, ) + tuple (j.edge_m.l2 for j in lattice_best)
-            #path_points = gpxpy.geo.Location (map_con.graph [j] [0] for j in path_points)
-            i.latitude, i.longitude = min ((intersection (
-                *map_con.graph [j.edge_m.l1] [0],
-                *map_con.graph [j.edge_m.l2] [0],
-                i.latitude, i.longitude
-            ) for j in lattice_best), key = lambda k: gpxpy.geo.Location (*k).distance_2d (i))
-            visualizer.add_marker (object (), *map_con.graph [j.edge_m.l1] [0])
-            visualizer.add_marker (object (), *map_con.graph [j.edge_m.l2] [0])
-            #visualizer.add_marker (object (), i.latitude, i.longitude, "Original")
-            continue """
-            """ if k <= j:
-                print (lattice_best [k].edge_m.l1, l1)
-                while k + 1 < len (lattice_best) and lattice_best [k].edge_m.l1 == l1:
-                    print (lattice_best [k].edge_m.l1, l1)
-                    k += 1
-                print (j, k)
-                l1, l2 = l2, lattice_best [k].edge_m.l1 """
-            i.latitude, i.longitude = intersection (
-                *map_con.graph [j.edge_m.l1] [0],
-                *map_con.graph [j.edge_m.l2] [0],
-                i.latitude, i.longitude
-            )
+    if not snap_gpx is False: # Snap GPX points to the matched path
+        gpx_snap (gpx, map_con, lattice_best, snap_gpx)
             
     for k, v in metadata.items ():
         ext = etree.Element (k)

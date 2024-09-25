@@ -6,7 +6,7 @@
     "default_name": "无名路",
     "forward_angle": 45,
     "follow_link": "%n辅路",
-    "snap_gpx": false,
+    "snap_gpx": 5,
     "process_divided": {
         "angle": 10,
         "length": 50,

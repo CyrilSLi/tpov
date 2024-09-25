@@ -37,7 +37,16 @@
             "type": "string"
         },
         "snap_gpx": {
-            "type": "boolean"
+            "oneOf": [
+                {
+                    "type": "number",
+                    "minimum": 0
+                },
+                {
+                    "type": "boolean",
+                    "enum": [false]
+                }
+            ]
         },
         "process_divided": {
             "oneOf": [
