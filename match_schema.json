@@ -34,7 +34,15 @@
             "maximum": 180
         },
         "follow_link": {
-            "type": "string"
+            "oneOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "boolean",
+                    "enum": [false]
+                }
+            ]
         },
         "snap_gpx": {
             "oneOf": [

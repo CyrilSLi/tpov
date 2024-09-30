@@ -90,7 +90,7 @@ def match_gpx (
     exit_filter = lambda way: True, # Filter for intersection exits
     default_name = "Unnamed Road", # Default name for unnamed roads
     forward_angle = 45, # Angle threshold for forward direction
-    follow_link = "%n", # Replace %n with link destination name, "" to disable
+    follow_link = "Link -> %n", # Replace %n with link destination name, False to disable
     process_divided = None, # Divided road processing parameters
     visualize = False, # Visualize intersections and actions in HTML
     hw_priority = {}, # Priority for highway types, default is 0
@@ -427,7 +427,7 @@ def match_gpx (
                 if dest == i.edge_m.l2:
                     exit_angle = angle # Save exit angle for next segment
                     exit_name = way.get ("name", default_name)
-                    if follow_link:
+                    if not follow_link is False:
                         followed_name = link_follow (j + 1, way)
                 if orig_id == tags [struct.pack ("<Q", orig) + struct.pack ("<Q", dest)]:
                     min_angle = angle # The same road is always treated as forward
@@ -458,7 +458,7 @@ def match_gpx (
                         add_marker (orig, {"Current": last_name, "Left": dirs [3], "Forward": dirs [4], "Right": dirs [5], "Exit": exit_dir}, "Intersection")
                 continue
             last_name = exit_name
-            if follow_link:
+            if not follow_link is False:
                 exit_name = followed_name
             exits = {k: v for k, v in sorted (exits, key = lambda x: x [0])} # Keep sorted order in dict
 
@@ -624,6 +624,8 @@ def gpx_snap (gpx, map_con, lattice_best, distance):
     # It chooses the segment which results in the smallest distance between the original and snapped points.
     # References: https://stackoverflow.com/a/6853926, gpxpy.geo.Location.distance
 
+    # TODO: fix sporadic snapping errors where the path suddenly jumps to a different road and back
+
     def intersection (point, y1, x1, y2, x2): # Returns matched point and distance from original point
         y, x = point.latitude, point.longitude
         scale = math.cos (math.radians (y2)) # Latitude correction (assume spherical Earth)
@@ -684,7 +686,7 @@ displays = {
 parser = argparse.ArgumentParser (
     description = "Process intersection and stop data using OSM",
     formatter_class = argparse.ArgumentDefaultsHelpFormatter,
-    epilog = """"""
+    epilog = "See https://tpov.readthedocs.io/ for the latest documentation."
 )
 parser.add_argument ("params", help = "Path to JSON parameter file")
 parser.add_argument ("gpx", help = "Path to .gpx track file")
