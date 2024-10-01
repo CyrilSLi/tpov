@@ -50,7 +50,7 @@
 
 - `hw_priority` - 一个以 OSM `highway` 种类为键、整数优先级为值的对象。匹配器将优先显示优先级更高的道路。未列出的 `highway` 种类默认优先级为 0。
 
-- `matcher_params` - 直接传递给地图匹配器的参数。详情请参阅您使用的地图匹配器的文档。
+- `matcher_params` - 直接传递给地图匹配器的参数。详情请参阅您使用的地图匹配器的文档。[BaseMatcher 文档（英文）](https://leuvenmapmatching.readthedocs.io/en/latest/classes/matcher/BaseMatcher.html#leuvenmapmatching.matcher.base.BaseMatcher)提供一些参数信息。
 
 - `display_params` - 一个控制数据显示方式的参数对象。
   - `display` - 一个将数据转换为 GPX 标签与元数据列表的函数。

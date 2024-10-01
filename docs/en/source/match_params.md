@@ -51,7 +51,7 @@ To ensure proper formatting of parameters, the parameter file is validated again
 
 - `hw_priority` - An object with OSM `highway` types as keys and integer priorities as values. The matcher will prefer to display roads with higher priority at intersections. Unlisted `highway` types are given a priority of 0.
 
-- `matcher_params` - Parameters passed directly to the map matcher. See the documentation for the map matcher you are using for more information.
+- `matcher_params` - Parameters passed directly to the map matcher. See the documentation for the map matcher you are using for more information. The [BaseMatcher docs](https://leuvenmapmatching.readthedocs.io/en/latest/classes/matcher/BaseMatcher.html#leuvenmapmatching.matcher.base.BaseMatcher) provide some information on the parameters.
 
 - `display_params` - An object with parameters to control how to display the data.
   - `display` - A function which converts the data into lists of GPX tags and metadata to display.
