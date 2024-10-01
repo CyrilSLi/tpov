@@ -25,7 +25,7 @@ All further documentation will refer to the diagram below.
 - `angle` - The maximum angle difference of the two sides of the divided road (e.g. `GH` to `BA`). If the angle difference is greater than this value, they will be treated as separate roads.
 - `length` - The maximum distance between the two sides of the divided road (e.g. `BEH` or `JFC`). If the distance is greater than this value, they will be treated as separate roads.
 - `same_name` - If `True`, the two sides of the divided road must have the same name to be considered the same road.
-- `apply_filter` - If `True`, the `exit_filter` function (TODO: add match param docs) will be applied to divided road processing. For example, this could mean that a four-way intersection with one side being a service road is treated as a T-junction.
+- `apply_filter` - If `True`, the `exit_filter` function ([docs](match_params.md)) will be applied to divided road processing. For example, this could mean that a four-way intersection with one side being a service road is treated as a T-junction.
 - `enabled_cases` - A list of which cases (see below) are enabled. There are currently **4** cases.
 
 ## Case 1: Ignore short spur which leads to the opposite side of the divided road

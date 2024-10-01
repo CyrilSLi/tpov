@@ -36,9 +36,9 @@
 
 ## tpov_match.py
 
-- `No points matched. Try increasing max_dist_init in the matcher parameters.` - GPX 轨迹的起点距离路网太远。尝试增大参数文件中的 `max_dist_init` 参数（单位: 米）。TODO：添加参数文件文档。**不要使用过高的值，因为它可能导致地图匹配偏移。** 这应该是 `leuvenmapmatching`地图匹配库中的问题，但目前而言 `100` 应该是一个安全的最大值。如果仍然太远，请尝试在编辑器（例如 [gpx.studio](https://gpx.studio/)）中截断轨迹的开头。
+- `No points matched. Try increasing max_dist_init in the matcher parameters.` - GPX 轨迹的起点距离路网太远。尝试增大参数文件中的 `max_dist_init` 参数（[文档](match_params.md)，单位: 米）。**不要使用过高的值，因为它可能导致地图匹配偏移。** 这应该是 `leuvenmapmatching`地图匹配库中的问题，但目前而言 `100` 应该是一个安全的最大值。如果仍然太远，请尝试在编辑器（例如 [gpx.studio](https://gpx.studio/)）中截断轨迹的开头。
 
-- `Not all points were matched.` - GPX 轨迹中的一些点距离路网太远。这通常是因为轨迹终点在停车场或其他远离路网的区域。可以在地图上查找消息中提供的最后匹配的坐标。如果您满意此结果，请输入 `y` 继续处理，否则请尝试增大参数文件中的 `max_dist` 参数。TODO：添加参数文件文档。
+- `Not all points were matched.` - GPX 轨迹中的一些点距离路网太远。这通常是因为轨迹终点在停车场或其他远离路网的区域。可以在地图上查找消息中提供的最后匹配的坐标。如果您满意此结果，请输入 `y` 继续处理，否则请尝试增大参数文件中的 `max_dist` 参数（[文档](match_params.md)）。
 
 - `Path discontinuity at [...]` - 检查给定坐标处的 GPX 轨迹是否有断裂或损坏的部分。这可能由于轨迹在隧道内或其他 GPS 信号不良的区域。如果不是，请[提交一个问题](#其他)。
 
