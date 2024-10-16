@@ -375,7 +375,7 @@ def from_baidu (seckey = None, transfer = True):
             "name": "stop_name",
             "uid": "stop_id"
         })
-        stop.pop ("traffic_info") # May contain time-specific information
+        stop.pop ("traffic_info", None) # May contain time-specific information
         if not transfer:
             stop.pop ("subways", None) # Subway transfer information
         geo = stop.pop ("geo").rstrip (";").split ("|") [-1].split (",") # BD-09MC format
@@ -401,11 +401,11 @@ def from_baidu (seckey = None, transfer = True):
                 raise ConnectionError (f"Error querying Baidu Maps API: {stop.status_code} {stop.reason}")
             if "content" in stop and "blinfo" in stop ["content"]:
                 stop = stop ["content"]
-                i ["__transfer__"].extend (j ["addr"] for j in stop ["blinfo"] if j ["uid"] != _trip ["route_id"])
+                i ["__transfer__"].extend (j ["addr"].replace ("地铁", "") for j in stop ["blinfo"] if j ["uid"] != _trip ["route_id"])
                 i ["__close_transfer__"] = i ["__transfer__"].copy ()
                 if "other_stations" in stop: # 其他同名站台线路
                     for j in stop ["other_stations"]:
-                        i ["__close_transfer__"].extend (k for k in j ["addr"].split (";") if k != _trip ["route_short_name"])
+                        i ["__close_transfer__"].extend (k.replace ("地铁", "") for k in j ["addr"].split (";") if k != _trip ["route_short_name"])
                 
                 i ["__transfer__"] = tuple (dict.fromkeys (i ["__transfer__"])) # Remove duplicates while preserving order
                 i ["__close_transfer__"] = tuple (dict.fromkeys (i ["__close_transfer__"]))
