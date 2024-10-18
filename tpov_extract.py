@@ -1,5 +1,5 @@
 # Built-in modules:
-import os, bisect, json, csv, argparse, pickle, subprocess, re
+import os, bisect, json, csv, argparse, pickle, subprocess, re, hashlib
 from urllib.parse import urlparse
 from zoneinfo import ZoneInfo
 
@@ -76,10 +76,10 @@ def from_gtfs (gtfs_dir = None, transfer = True):
         with open ("stop_times.txt") as f:
             header = iter (csv.reader (f)).__next__ ()
             ti, ss = header.index ("trip_id") + 1, header.index ("stop_sequence") + 1
+        
         with open ("stop_times_sorted.txt", "w") as f:
             writer = csv.writer (f)
             writer.writerow (header)
-        
         # Reopen file as subprocess seem to reset the file pointer
         with open ("stop_times_sorted.txt", "a") as f:
             print ("Sorting stop_times (this may take a while)...")
@@ -94,23 +94,38 @@ def from_gtfs (gtfs_dir = None, transfer = True):
             f.readline () # Skip header
             indices, last_id, fileptr, si = {}, None, f.tell (), header.index ("stop_id")
             line, transfers = f.readline (), {}
+            h, linehash, dups, num_trips = hashlib.md5 (), set (), 0, 0
             while line:
                 line_cnt.update ()
                 line = line.strip ().split (",") # CSV format
                 if line [ti] != last_id: # New trip_id
-                    indices [line [ti]] = fileptr
+                    h = h.hexdigest ()
+                    if h in linehash:
+                        dups += 1
+                    else:
+                        indices [line [ti]] = fileptr
+                        linehash.add (h)
+                    h = hashlib.md5 ()
                     last_id = line [ti]
+                    num_trips += 1
+
+                h.update (",".join (i for j, i in enumerate (line) if j != ti and j != ss).encode ()) # Only check useful fields for duplicates
                 transfers.setdefault (line [si], set ()).add (trip_names [line [ti]]) # Map route_short_name to stop
                 fileptr = f.tell () # Save file pointer at beginning of line
                 line = f.readline ()
             line_cnt.close ()
-        
+
             with open ("stop_times_sorted.txt.pkl", "wb") as f:
                 pickle.dump ((indices, transfers), f)
+            print (f"Sorted and indexed {num_trips} trips, {len (indices)} unique, {dups} duplicates.")
 
     print ("Reading stop information...")
     with open ("stop_times_sorted.txt.pkl", "rb") as f:
         indices, transfers = pickle.load (f)
+    dup = len (trip_ids)
+    trip_ids = [i for i in trip_ids if i ["trip_id"] in indices] # Remove duplicates
+    print (f"Removed {dup - len (trip_ids)} duplicate trips, {len (trip_ids)} remaining.")
+
     with open ("stop_times_sorted.txt") as f:
         header = iter (csv.reader (f)).__next__ ()
         for i in trip_ids:
@@ -140,6 +155,7 @@ def from_gtfs (gtfs_dir = None, transfer = True):
         trips_display = trip_ids [ : num_trips]
     else:
         trips_display = trip_ids [trip - (num_trips + 1) // 2 : trip + num_trips // 2]
+
     stops = {} # set (j ["stop_id"] for i in trips_display for j in i ["__stops__"])
     print ("Searching for stop information...")
     for i in trips_display:
@@ -149,23 +165,30 @@ def from_gtfs (gtfs_dir = None, transfer = True):
         for i in csv.DictReader (f):
             if i ["stop_id"] in stops:
                 stops [i ["stop_id"]] = i
+
+    linehash = {}
     for i in trips_display:
+        h = hashlib.md5 ()
         for j in i ["__stops__"]:
             j.update (stops [j ["stop_id"]])
+            h.update (j ["stop_id"].encode ())
+        linehash [i ["trip_id"]] = h.hexdigest ()
+
     # Final format of trips_display:
     # [{fields from trips.txt, "__stops__": [{fields from stop_times.txt + fields from stops.txt}, ...]}, ...]
 
     os.chdir (orig) # Restore original working directory
 
     choicetable (
-        ["Headsign", "From", "To", "Depart", "Arrive", "Trip ID"],
+        ["Headsign", "From", "To", "Depart", "Arrive", "Trip ID", "Stops Hash"],
         ([
             i ["trip_headsign"] if "trip_headsign" in i else f"{route ['route_short_name']} {route ['route_long_name']}",
             i ["__stops__"] [0] ["stop_name"],
             i ["__stops__"] [-1] ["stop_name"],
             i ["__stops__"] [0] ["departure_time"],
             i ["__stops__"] [-1] ["departure_time"],
-            i ["trip_id"]
+            i ["trip_id"],
+            linehash [i ["trip_id"]]
         ] for i in trips_display)
     )
     trip = next (choice (trips_display, "Select one trip: ", 1, 1))

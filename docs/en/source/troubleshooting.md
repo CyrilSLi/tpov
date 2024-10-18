@@ -20,6 +20,8 @@ Please refer to the section for the data source you are using.
 
 - `Route [...] not found` - Try specifying the route in another way (e.g. with the route number instead of the name or vice versa). Note that **some transit agencies pad route numbers with leading zeroes** (e.g. `099` instead of `99`).
 
+- Multiple trips with the same route and direction - The GTFS format stores each trip separately, so a frequent route may have hundreds of trips. Exact duplicate trips have been filtered out during indexing, however the remaining trips are kept for user information. Usually select the trip with the closest departure time to your video. A hash of all the stops on each trip is provided in the trips table. Trips with the same hash may not depart and arrive at the same time, but they do cover the same stops in the same order, so you can choose any of them.
+
 ### OSM
 
 - `Error querying Overpass API` - Check your Internet connection, etc.
