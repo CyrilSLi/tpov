@@ -40,11 +40,13 @@ Please refer to the section for the data source you are using.
 
 - `No points matched. Try increasing max_dist_init in the matcher parameters.` - The start of the GPX track is too far away from any road. Try increasing the `max_dist_init` parameter (in meters) in the parameter file ([docs](match_params.md)). **Do not use a high value, as it seems to offset map matching.** This is probably an issue with `leuvenmapmatching`, the map matching library used by this script, however in the meantime `100` should a safe maximum. If it is still too far, try truncating the beginning of the track in an external editor (e.g. [gpx.studio](https://gpx.studio/)).
 
-- `Not all points were matched.` - Some points in the GPX track are too far away from any road. This often happens if the track ends in a parking lot or similar area not near a public road. Look up the last matched coordinates provided in the message on a map. If they are satifactory for your purposes, enter `y` to continue processing. If not, try increasing the `max_dist` parameter in the parameter file ([docs](match_params.md)).
+- `Not all points were matched.` - Some points in the GPX track are too far away from any road. This often happens if the track ends in a parking lot or similar area not near a public road. Look up the last matched coordinates provided in the message on a map. If they are satifactory for your purposes, enter `y` to continue processing. If not, try increasing the `max_dist` parameter in the parameter file ([docs](match_params.md)). If the last matched coordinates are near an intersection with roads at a very slight angle (e.g. a highway exit), try increasing `max_lattice_width` to avoid getting stuck going the wrong direction.
 
 - `Path discontinuity at [...]` - Check for a discontinued or corrupted section of the GPX track at the given coordinates. This can happen if the track was recorded in a tunnel or other area with poor GPS reception. If not, please [open an issue](#other).
 
 - `NaiveStopMatcher failed to match stops. Try using a different matcher.` - NaiveStopMatcher is currently the only stop matcher available, and matches stops simply to the nearest point on the track. This is expected to fail on looping or otherwise overlapping routes. Please [open an issue](#other), and if you have a solution, consider contributing to the project.
+
+- When using `snap_gpx` and there are erratic jumps in the matched track - try to increase the value of `snap_gpx` in the parameter file ([docs](match_params.md)).
 
 ## tpov_combine.py
 

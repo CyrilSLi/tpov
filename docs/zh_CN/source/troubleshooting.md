@@ -40,11 +40,13 @@
 
 - `No points matched. Try increasing max_dist_init in the matcher parameters.` - GPX 轨迹的起点距离路网太远。尝试增大参数文件中的 `max_dist_init` 参数（[文档](match_params.md)，单位: 米）。**不要使用过高的值，因为它可能导致地图匹配偏移。** 这应该是 `leuvenmapmatching`地图匹配库中的问题，但目前而言 `100` 应该是一个安全的最大值。如果仍然太远，请尝试在编辑器（例如 [gpx.studio](https://gpx.studio/)）中截断轨迹的开头。
 
-- `Not all points were matched.` - GPX 轨迹中的一些点距离路网太远。这通常是因为轨迹终点在停车场或其他远离路网的区域。可以在地图上查找消息中提供的最后匹配的坐标。如果您满意此结果，请输入 `y` 继续处理，否则请尝试增大参数文件中的 `max_dist` 参数（[文档](match_params.md)）。
+- `Not all points were matched.` - GPX 轨迹中的一些点距离路网太远。这通常是因为轨迹终点在停车场或其他远离路网的区域。可以在地图上查找消息中提供的最后匹配的坐标。如果您满意此结果，请输入 `y` 继续处理，否则请尝试增大参数文件中的 `max_dist` 参数（[文档](match_params.md)）。 如果最后匹配的坐标接近夹角很小的路口（例如高速公路出口），请尝试增大 `max_lattice_width` 以免陷入错误的方向。
 
 - `Path discontinuity at [...]` - 检查给定坐标处的 GPX 轨迹是否有断裂或损坏的部分。这可能由于轨迹在隧道内或其他 GPS 信号不良的区域。如果不是，请[提交一个问题](#其他)。
 
 - `NaiveStopMatcher failed to match stops. Try using a different matcher.` - NaiveStopMatcher 是目前唯一的站点匹配器，它只简单的将停靠点匹配到轨迹上离它最近的点。这在环线或其他重叠路线上很可能会失败。请[提交一个问题](#其他)，并如果您有解决方案请考虑为此项目做出贡献。
+
+- 用 `snap_gpx` 时匹配轨迹有不规则的跳跃 - 尝试增大参数文件中的 `snap_gpx` 值（[文档](match_params.md)）。
 
 ## tpov_combine.py
 

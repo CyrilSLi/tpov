@@ -4,7 +4,7 @@ requests
 coord-convert
 bd09convertor
 osmium
-gpxpy
+git+https://github.com/tkrajina/gpxpy.git
 leuvenmapmatching
 lxml
 jsonschema

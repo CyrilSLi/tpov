@@ -11,6 +11,7 @@
 *.zip
 *.json
 *.html
+*.txt
 
 !tpov_filter.txt
 !tpov_commands.json
