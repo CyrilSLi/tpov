@@ -605,6 +605,8 @@ def NaiveStopMatcher (gpx_path, stop_data, lattice_best = None, map_con = None):
         for i in stop_data ["__stops__"]]
 
     if indices != sorted (indices):
+        if indices == sorted (indices, reverse = True):
+            raise SystemExit ("NaiveStopMatcher: NaiveStopMatcher failed to match stops. You likely extracted stop data for the other direction of travel.")
         raise SystemExit ("NaiveStopMatcher failed to match stops. Try using a different stop matcher.")
     print (f"NaiveStopMatcher: Matched {len (indices)} stops successfully.")
     return indices
