@@ -761,7 +761,7 @@ def main (args):
     if stop_data:
         for i in stop_data ["__stops__"]:
             gpx.waypoints.append (gpxpy.gpx.GPXWaypoint (latitude = i ["stop_lat"], longitude = i ["stop_lon"], name = i ["stop_name"]))
-    if not snap_gpx is False: # Snap GPX points to the matched path
+    if (not snap_gpx is False) and args.map: # Snap GPX points to the matched path
         gpx_snap (gpx, map_con, lattice_best, snap_gpx)
             
     for k, v in metadata.items ():
