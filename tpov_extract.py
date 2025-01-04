@@ -27,7 +27,7 @@ core_tags = {
     "Stop": ("stop_id", "stop_name", "stop_lat", "stop_lon", "__transfer__")
 }
 
-def from_gtfs (gtfs_dir = None, transfer = True):
+def from_gtfs (gtfs_dir = None, transfer = True, shape = False):
     # Third-party modules:
     from tqdm import tqdm
 
@@ -177,8 +177,6 @@ def from_gtfs (gtfs_dir = None, transfer = True):
     # Final format of trips_display:
     # [{fields from trips.txt, "__stops__": [{fields from stop_times.txt + fields from stops.txt}, ...]}, ...]
 
-    os.chdir (orig) # Restore original working directory
-
     choicetable (
         ["Headsign", "From", "To", "Depart", "Arrive", "Trip ID", "Stops Hash"],
         ([
@@ -202,6 +200,16 @@ def from_gtfs (gtfs_dir = None, transfer = True):
     elif not trip ["route_long_name"]:
         trip ["route_long_name"] = trip ["route_short_name"]
 
+    if shape:
+        shape = []
+        with open ("shapes.txt") as f:
+            for i in csv.DictReader (f):
+                if i ["shape_id"] == trip ["shape_id"]:
+                    shape.append (([float (i ["shape_pt_lon"]), float (i ["shape_pt_lat"])], int (i ["shape_pt_sequence"])))
+        trip ["__shape__"] = [i [0] for i in sorted (shape, key = lambda x: x [1])] # Sort by sequence
+
+    os.chdir (orig) # Restore original working directory
+
     def get_transfer (_trip):
         for i in _trip ["__stops__"]:
             transfer = transfers [i ["stop_id"]]
@@ -211,7 +219,7 @@ def from_gtfs (gtfs_dir = None, transfer = True):
 
     return trip, get_transfer if transfer else lambda x: None # Return a dummy function if transfer is disabled
 
-def from_osm (rel_id, transfer = True, osm_out = "meta", opql_url = "http://overpass-api.de/api/interpreter"):
+def from_osm (rel_id, transfer = True, shape = False, osm_out = "meta", opql_url = "http://overpass-api.de/api/interpreter"):
     # Third-party modules:
     import requests as req
 
@@ -261,6 +269,100 @@ def from_osm (rel_id, transfer = True, osm_out = "meta", opql_url = "http://over
     for i in trip ["__stops__"]:
         i.update (stops [i ["ref"]])
 
+    if shape:
+        opql_req = f'[out:json];rel({rel_id});out skel;way(r);foreach{{out geom;}};'
+        shape_data = req.get (opql_url, data = opql_req)
+        if shape_data.status_code == 200:
+            shape_data = shape_data.json () ["elements"]
+        else:
+            raise ConnectionError (f"Error querying Overpass API: {shape_data.status_code} {shape_data.reason}")
+        relation = shape_data.pop (0) ["members"]
+
+        shape_data = {i ["id"]: i for i in shape_data}
+        for v in shape_data.values (): # Convert geometry to [lon, lat] format
+            v ["geometry"] = [[j ["lon"], j ["lat"]] for j in v ["geometry"].copy ()]
+        ways = [shape_data [i ["ref"]] for i in relation if i ["type"] == "way"]
+
+        """
+            currF - First node of the current way
+            currL - Last node of the current way
+            nextF - First node of the next way
+            nextL - Last node of the next way
+            last_correct - Whether the direction of travel is known
+        """
+        shape, i, last_node = [], {}, None
+        def extend_geom (direction):
+            nonlocal shape, i, last_node
+            if direction == "forward":
+                shape.extend (i ["geometry"])
+                last_node = i ["nodes"] [-1]
+            elif direction == "reverse":
+                shape.extend (reversed (i ["geometry"]))
+                last_node = i ["nodes"] [0]
+            
+        last_correct = False
+        for i, j in zip (ways, ways [1 : ] + [ways [0]]): # Iterate len (ways) times
+            oneway = i ["tags"].get ("oneway")
+            currF, currL = i ["nodes"] [0], i ["nodes"] [-1]
+            nextF, nextL = j ["nodes"] [0], j ["nodes"] [-1]
+            if currF == currL:
+                if oneway == "yes":
+                    extend_geom ("forward")
+                elif oneway == "-1":
+                    extend_geom ("reverse")
+                else:
+                    print (f"Way {i ['id']} is a closed loop. Would you like to")
+                    choice = input (f"Add it in (F)orward or (R)erverse direction, or skip processing shape data (any other key)? ").lower ()
+                    if choice == "f":
+                        extend_geom ("forward")
+                    elif choice == "r":
+                        extend_geom ("reverse")
+                    else:
+                        shape = []
+                        break # Skip processing shape data
+                print (f"Warning: Way {i ['id']} is a closed loop.")
+                last_correct = True # Direction given by the first way
+                continue
+
+            elif not last_correct:
+                nodes = {"currF": currF, "currL": currL, "nextF": nextF, "nextL": nextL}
+                dups = set ((k for k, v in nodes.items () if list (nodes.values ()).count (v) > 1))
+                if len (dups) == 0:
+                    print (f"Error: Consecutive ways {i ['id']} and {j ['id']} do not connect.")
+                    raise SystemExit
+                elif len (dups) > 2:
+                    if oneway == "yes":
+                        extend_geom ("forward")
+                    elif oneway == "-1":
+                        extend_geom ("reverse")
+                    else:
+                        print (f"Error: Ways {i ['id']} and {j ['id']} form an ambiguous loop.")
+                        raise SystemExit
+                    print (f"Warning: Ways {i ['id']} and {j ['id']} form a loop.")
+                    last_correct = True
+                    continue
+                else:
+                    if dups in ({"currL", "nextF"}, {"currL", "nextL"}): # First way is correctly oriented
+                        extend_geom ("forward")
+                    elif dups in ({"currF", "nextF"}, {"currF", "nextL"}): # First way is reversed
+                        extend_geom ("reverse")
+                    else:
+                        print (f"Invalid duplicate set: {dups}\nPlease report this issue.")
+                        raise SystemExit
+                    last_correct = True
+                    continue
+            
+            if currF == last_node:
+                extend_geom ("forward")
+            elif currL == last_node:
+                extend_geom ("reverse")
+            else:
+                print (f"Error: Way {i ['id']} does not connect with its previous way.")
+                raise SystemExit
+                
+        if shape:
+            trip ["__shape__"] = shape
+
     def get_transfer (_trip):
         for i in _trip ["__stops__"]:
             # Transfer lines with no "ref" or the same as route_short_name are excluded
@@ -268,15 +370,18 @@ def from_osm (rel_id, transfer = True, osm_out = "meta", opql_url = "http://over
 
     return trip, get_transfer if transfer else lambda x: None # Return a dummy function if transfer is disabled
 
-def from_tianditu (api_key, transfer = True):
-    # Third-party modules:
-    import requests as req
-    from tqdm import tqdm
-
+def from_tianditu (api_key, transfer = True, shape = False):
     if transfer:
         print ("Transfer information not supported for Tianditu API, which may be unavailable as a whole in the future.\n"
                "Please consider using other data sources or use -t to disable transfer information in the meantime.")
         raise SystemExit
+    elif shape:
+        raise NotImplementedError ("Support for Tianditu is deprecated and may be removed in the future.")
+
+    # Third-party modules:
+    import requests as req
+    from tqdm import tqdm
+
     while True:
         keyword = input ("Enter the route name: ")
         if not keyword:
@@ -333,7 +438,7 @@ def from_tianditu (api_key, transfer = True):
 
     return trip, get_transfer if transfer else lambda x: None # Return a dummy function if transfer is disabled
 
-def from_baidu (seckey = None, transfer = True):
+def from_baidu (seckey = None, transfer = True, shape = False):
     # Third-party modules:
     import requests as req
     from tqdm import tqdm
@@ -348,6 +453,7 @@ def from_baidu (seckey = None, transfer = True):
         "Referer": "https://map.baidu.com/",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
     }
+    strip_geo = lambda geo: geo.rstrip (";").split ("|") [-1].split (",")
 
     while True:
         wd = input ("Enter the route name: ")
@@ -381,8 +487,9 @@ def from_baidu (seckey = None, transfer = True):
         trip = trip ["content"] [0]
     else:
         raise ConnectionError (f"Error querying Baidu Maps API: {trip.status_code} {trip.reason}")
+
+    line_geo = strip_geo (trip.pop ("geo")) # Line geometry
     
-    trip.pop ("geo") # Remove geometry data
     trip.update ({
     "__sourcetype__": "BAIDU",
     "__stops__": []
@@ -401,13 +508,19 @@ def from_baidu (seckey = None, transfer = True):
         stop.pop ("traffic_info", None) # May contain time-specific information
         if not transfer:
             stop.pop ("subways", None) # Subway transfer information
-        geo = stop.pop ("geo").rstrip (";").split ("|") [-1].split (",") # BD-09MC format
+        geo = strip_geo (stop.pop ("geo")) # BD-09MC format
         lon, lat = bd2wgs (*mc2ll (float (geo [0]), float (geo [1]))) # 请遵循相关法律法规
         stop.update ({
             "stop_lat": lat,
             "stop_lon": lon
         })
         trip ["__stops__"].append (stop)
+
+    if shape:
+        shape = []
+        for lon, lat in zip (line_geo [ : : 2], line_geo [1 : : 2]):
+            shape.append (bd2wgs (*mc2ll (float (lon), float (lat)))) # 请遵循相关法律法规
+        trip ["__shape__"] = shape
     
     def get_transfer (_trip):
         for i in tqdm (_trip ["__stops__"], desc = "Querying transfer information"):
@@ -506,6 +619,7 @@ parser.add_argument ("parameter", help = "Parameter to pass to the data source")
 parser.add_argument ("output", help = "Output filepath to write extracted data to")
 parser.add_argument ("-c", "--core-only", action = "store_true", help = "Only save core tags (see below for details)")
 parser.add_argument ("-t", "--no-transfer", action = "store_false", help = "Exclude the __transfer__ tag")
+parser.add_argument ("-s", "--shape", action = "store_true", help = "Include route shape data")
 
 def main (args):
     try:
@@ -514,7 +628,7 @@ def main (args):
         print (f"Data source '{args.source}' not supported. Run with -h for help.")
         raise SystemExit
 
-    trip, get_transfer = source (args.parameter, transfer = args.no_transfer)
+    trip, get_transfer = source (args.parameter, transfer = args.no_transfer, shape = args.shape)
     sel_stops (trip, open (args.output, "w"), args.core_only, get_transfer)
 
 def script (args):
