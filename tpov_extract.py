@@ -5,7 +5,7 @@ from zoneinfo import ZoneInfo
 
 from tpov_functions import *
 
-global _stop_fields # Fields to be displayed for each data source
+global _stop_fields # {source: ([display fields], [field keys])}
 _stop_fields = {
     "GTFS": (
         ["Name", "Latitude", "Longitude", "Depart", "ID"],
@@ -14,6 +14,10 @@ _stop_fields = {
     "OSM": (
         ["Name", "Latitude", "Longitude", "Role", "ID"],
         ["stop_name", "stop_lat", "stop_lon", "role", "stop_id"]
+    ),
+    "12306": (
+        ["Name", "Latitude", "Longitude", "Depart", "Telecode / ID"],
+        ["stop_name", "stop_lat", "stop_lon", "startTime", "stop_id"]
     ),
     "__default__": (
         ["Name", "Latitude", "Longitude", "ID"],
@@ -471,7 +475,7 @@ def from_baidu (seckey = None, transfer = True, shape = False):
                 break
             print ("No results found. Try entering the route name in full.")
         else:
-            raise ConnectionError (f"Error querying Baidu Maps API: {trip.status_code} {trip.reason}")
+            raise ConnectionError (f"Error querying Baidu Maps API: {trips.status_code} {trips.reason}")
     
     choicetable (
         ["Name", "ID"],
@@ -548,6 +552,89 @@ def from_baidu (seckey = None, transfer = True, shape = False):
     
     return trip, get_transfer if transfer else lambda x: None
 
+def from_12306 (_ = None, transfer = True, shape = False):
+    # Third-party modules:
+    import requests as req
+    from coord_convert.transform import gcj2wgs
+
+    """
+    headers = {
+        "Host": "mobile.12306.cn",
+        "Referer": "https://servicewechat.com/wxa51f55ab3b2655b9/128/page-frame.html",
+        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_7_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.55(0x18003729) NetType/WIFI Language/en"
+    }
+    """
+
+    while True:
+        trainCode = input ("Enter the train number (e.g. G1234): ").upper () # Train number is capitalized
+        if not trainCode:
+            raise ValueError ("Train number cannot be empty.")
+        startDay = input ("Enter the date of travel in YYYYMMDD format (e.g. 20210930): ")
+        if not startDay:
+            raise ValueError ("Date of travel cannot be empty.")
+
+        trip = req.post (f"https://mobile.12306.cn/wxxcx/wechat/main/travelServiceQrcodeTrainInfo?trainCode={trainCode}&startDay={startDay}&startTime=&endDay=&endTime=")
+        if trip.status_code == 200:
+            trip = trip.json ()
+            if "data" in trip and "trainDetail" in trip ["data"] and "stopTime" in trip ["data"] ["trainDetail"]:
+                trip = trip ["data"]
+                break
+            print ("No results found. Verify that the train number and date are correct.")
+        else:
+            raise ConnectionError (f"Error querying 12306 API: {trip.status_code} {trip.reason}")
+
+    trip.update ({
+        "__sourcetype__": "12306",
+        "__stops__": []
+    })
+    trip.update (trip.pop ("trainDetail"))
+    trip.pop ("timestamp") # Request timestamp
+    trip = renamedict (trip, {
+        "stationTrainCodeAll": "route_long_name",
+        "trainCode": "route_short_name",
+        "trainNo": "route_id"
+    })
+    trip ["agency_name"] = "中国铁路" + trip ["stopTime"] [0] ["jiaolu_corporation_code"] # e.g. 中国铁路沈阳客运段
+    for i in trip.pop ("stopTime"):
+        stop = renamedict (i, {
+            "stationName": "stop_name",
+            "stationTelecode": "stop_id",
+        })
+        lon, lat = gcj2wgs (float (i ["lon"]), float (i ["lat"])) # 请遵循相关法律法规
+        stop.update ({
+            "stop_lat": lat,
+            "stop_lon": lon
+        })
+        for j in ("arriveTime", "startTime"):
+            if j in stop:
+                stop [j] = f"{stop [j] [ : 2]}:{stop [j] [2 : ]}:00" # HH:mm:ss format
+        trip ["__stops__"].append (stop)
+
+    if shape:
+        shape_data = req.post (f"https://mobile.12306.cn/wxxcx/wechat/main/getTrainMapLine?version=v2&trainNo={trip ['route_id']}")
+        if shape_data.status_code == 200:
+            shape_data = shape_data.json () ["data"]
+        else:
+            raise ConnectionError (f"Error querying Overpass API: {shape_data.status_code} {shape_data.reason}")
+
+        if type (shape_data) is not dict or shape_data == {}:
+            if input ("Shape data is not available for this train. Continue processing without shape data? (Y/n)? ").lower () != "y":
+                raise SystemExit ("Processing cancelled.")
+        shape = []
+        shape_data = list (shape_data.values ())
+        shape_data.sort (key = lambda x: x ["index"])
+        for i in shape_data:
+            if i ["line"] [0] in shape:
+                i ["line"].pop (0) # Duplicate start and end point of adjacent segments
+            for [lon, lat] in i ["line"]:
+                shape.append (gcj2wgs (float (lon), float (lat))) # 请遵循相关法律法规
+        trip ["__shape__"] = shape
+
+    def get_transfer (_trip):
+        pass # NotImplementedError
+
+    return trip, get_transfer if transfer else lambda x: None
+
 def sel_stops (trip, json_out = None, core_only = False, get_transfer = lambda x: None):
     fields = _stop_fields.get (trip ["__sourcetype__"].upper (), _stop_fields ["__default__"])
     choicetable (
@@ -584,7 +671,8 @@ sources = {
     "GTFS": from_gtfs,
     "OSM": from_osm,
     "TIANDITU": from_tianditu,
-    "BAIDU": from_baidu
+    "BAIDU": from_baidu,
+    "12306": from_12306
 }
 
 parser = argparse.ArgumentParser (
@@ -596,6 +684,7 @@ Source      Parameter       Example
 GTFS        GTFS directory  /path/to/gtfs (unzipped)
 OSM         Relation ID     1234567
 BAIDU       Seckey          a1b2c3... ('none' to exclude)
+12306       None            N/A
 
 Core tags are consistent across all data sources:
 (note that identifiers are only unique within the data source)
