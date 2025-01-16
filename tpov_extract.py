@@ -698,7 +698,10 @@ stop_id             Stop        Unique identifier for the stop
 stop_name           Stop        Name of the stop
 stop_lat            Stop        Latitude of the stop
 stop_lon            Stop        Longitude of the stop
+
+The following core tags are included or excluded based on flags:
 __transfer__        Stop        List of transfers at the stop
+__shape__           Global      Route shape coordinate list
 
 Non-core tags may vary and are specific to each data source.
 """
