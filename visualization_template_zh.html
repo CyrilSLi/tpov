@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang = "en">
+<html lang="zh-CN">
 <head>
-    <title>tpov Match Visualization</title>
-    <meta charset = "utf-8">
+    <title>tpov 匹配可视化</title>
+    <meta charset="utf-8">
     <link rel="stylesheet" href="assets/leaflet/leaflet.css" />
     <script src="assets/leaflet/leaflet.js"></script>
     <style>
@@ -19,10 +19,11 @@
     </style>
 </head>
 <body>
-    <noscript><p>JavaScript is required to use this website.</p></noscript>
-    <div id = "map"></div>
+    <noscript><p>运行此网站需要启用 JavaScript。</p></noscript>
+    <div id="map"></div>
     <script>
-        var map = L.map ("map").setView ([%lat, %lon], 11);
+        var polyline = L.polyline (%points);
+        var map = L.map ("map").fitBounds (polyline.getBounds ());
         var tk = null; // 可把null替换为您的密钥 (为了您的安全, 请不要公开带有密钥的代码)
         while (tk == null || tk == "") {
             tk = prompt ("请输入一个天地图浏览器端密钥：", localStorage.getItem ("browser_tk") || "");
@@ -38,7 +39,7 @@
             maxZoom: 18
         }).addTo (map);
         var markers = %markers;
-        L.polyline (%points).addTo (map);
+        polyline.addTo (map);
         for (var i = 0; i < markers.length; i++) {
             var marker = markers [i];
             L.marker ([marker.lat, marker.lon]).addTo (map).bindPopup (marker.text);

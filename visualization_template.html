@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang = "en">
+<html lang="en">
 <head>
     <title>tpov Match Visualization</title>
-    <meta charset = "utf-8">
+    <meta charset="utf-8">
     <link rel="stylesheet" href="assets/leaflet/leaflet.css" />
     <script src="assets/leaflet/leaflet.js"></script>
     <style>
@@ -20,15 +20,16 @@
 </head>
 <body>
     <noscript><p>JavaScript is required to use this website.</p></noscript>
-    <div id = "map"></div>
+    <div id="map"></div>
     <script>
-        var map = L.map ("map").setView ([%lat, %lon], 11);
+        var polyline = L.polyline (%points);
+        var map = L.map ("map").fitBounds (polyline.getBounds ());
         L.tileLayer ("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
             attribution: "&copy; <a href = 'https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors",
             maxZoom: 19,
         }).addTo (map);
         var markers = %markers;
-        L.polyline (%points).addTo (map);
+        polyline.addTo (map);
         for (var i = 0; i < markers.length; i++) {
             var marker = markers [i];
             L.marker ([marker.lat, marker.lon]).addTo (map).bindPopup (marker.text);
