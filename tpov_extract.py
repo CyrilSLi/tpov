@@ -1,5 +1,5 @@
 # Built-in modules:
-import os, bisect, json, csv, argparse, pickle, subprocess, re, hashlib
+import os, bisect, json, csv, argparse, pickle, subprocess, re, hashlib, time, threading
 from urllib.parse import urlparse
 from zoneinfo import ZoneInfo
 
@@ -285,7 +285,7 @@ def from_osm (rel_id, transfer = True, shape = False, osm_out = "meta", opql_url
         shape_data = {i ["id"]: i for i in shape_data}
         for v in shape_data.values (): # Convert geometry to [lon, lat] format
             v ["geometry"] = [[j ["lon"], j ["lat"]] for j in v ["geometry"].copy ()]
-        ways = [shape_data [i ["ref"]] for i in relation if i ["type"] == "way"]
+        ways = [shape_data [i ["ref"]] for i in relation if i ["type"] == "way" and i.get ("role", "") == ""] # TODO: Handle roles
 
         """
             currF - First node of the current way
@@ -527,7 +527,9 @@ def from_baidu (seckey = None, transfer = True, shape = False):
         trip ["__shape__"] = shape
     
     def get_transfer (_trip):
-        for i in tqdm (_trip ["__stops__"], desc = "Querying transfer information"):
+        transfers, close_transfers, threadpool = {}, {}, []
+        def stop_transfer (i):
+            nonlocal transfers, close_transfers
             i ["__transfer__"], i ["__close_transfer__"] = [], []
             if "subways" in i and len (i ["subways"]):
                 exp = re.compile ("<[^>]*>") # Strip HTML tag
@@ -547,8 +549,26 @@ def from_baidu (seckey = None, transfer = True, shape = False):
                     for j in stop ["other_stations"]:
                         i ["__close_transfer__"].extend (k.replace ("地铁", "") for k in j ["addr"].split (";") if k != _trip ["route_short_name"])
                 
-                i ["__transfer__"] = tuple (dict.fromkeys (i ["__transfer__"])) # Remove duplicates while preserving order
-                i ["__close_transfer__"] = tuple (dict.fromkeys (i ["__close_transfer__"]))
+                transfers [i ["stop_id"]] = tuple (dict.fromkeys (i ["__transfer__"])) # Remove duplicates while preserving order
+                close_transfers [i ["stop_id"]] = tuple (dict.fromkeys (i ["__close_transfer__"]))
+            else:
+                raise ValueError ("No transfer information found. Try providing a seckey.")
+
+        for i in _trip ["__stops__"]:
+            threadpool.append (threading.Thread (target = stop_transfer, args = (i, )))
+            threadpool [-1].start ()
+        with tqdm (total = len (threadpool), desc = "Querying transfer information") as pbar:
+            while True:
+                count = len (threadpool)
+                threadpool = [t for t in threadpool if t.is_alive ()]
+                pbar.update (count - len (threadpool))
+                if not threadpool:
+                    break
+                time.sleep (0.1)
+
+        for i in _trip ["__stops__"]:
+            i ["__transfer__"] = transfers [i ["stop_id"]]
+            i ["__close_transfer__"] = close_transfers [i ["stop_id"]]
     
     return trip, get_transfer if transfer else lambda x: None
 
@@ -559,11 +579,14 @@ def from_12306 (_ = None, transfer = True, shape = False):
 
     """
     headers = {
+        "Connection": "keep-alive",
         "Host": "mobile.12306.cn",
         "Referer": "https://servicewechat.com/wxa51f55ab3b2655b9/128/page-frame.html",
         "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_7_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.55(0x18003729) NetType/WIFI Language/en"
     }
     """
+    headers = {}
+    
 
     while True:
         trainCode = input ("Enter the train number (e.g. G1234): ").upper () # Train number is capitalized
@@ -573,7 +596,7 @@ def from_12306 (_ = None, transfer = True, shape = False):
         if not startDay:
             raise ValueError ("Date of travel cannot be empty.")
 
-        trip = req.post (f"https://mobile.12306.cn/wxxcx/wechat/main/travelServiceQrcodeTrainInfo?trainCode={trainCode}&startDay={startDay}&startTime=&endDay=&endTime=")
+        trip = req.post (f"https://mobile.12306.cn/wxxcx/wechat/main/travelServiceQrcodeTrainInfo?trainCode={trainCode}&startDay={startDay}&startTime=&endDay=&endTime=", headers = headers)
         if trip.status_code == 200:
             trip = trip.json ()
             if "data" in trip and "trainDetail" in trip ["data"] and "stopTime" in trip ["data"] ["trainDetail"]:
@@ -600,6 +623,11 @@ def from_12306 (_ = None, transfer = True, shape = False):
             "stationName": "stop_name",
             "stationTelecode": "stop_id",
         })
+        if ("lon" not in i or "lat" not in i):
+            if input (f'{stop ["stop_name"]} station has no coordinate data. Continue processing and skip this station (Y/n)? ').lower () != "y":
+                raise SystemExit ("Processing cancelled.")
+            continue
+
         lon, lat = gcj2wgs (float (i ["lon"]), float (i ["lat"])) # 请遵循相关法律法规
         stop.update ({
             "stop_lat": lat,
@@ -611,14 +639,14 @@ def from_12306 (_ = None, transfer = True, shape = False):
         trip ["__stops__"].append (stop)
 
     if shape:
-        shape_data = req.post (f"https://mobile.12306.cn/wxxcx/wechat/main/getTrainMapLine?version=v2&trainNo={trip ['route_id']}")
+        shape_data = req.post (f"https://mobile.12306.cn/wxxcx/wechat/main/getTrainMapLine?version=v2&trainNo={trip ['route_id']}", headers = headers)
         if shape_data.status_code == 200:
             shape_data = shape_data.json () ["data"]
         else:
             raise ConnectionError (f"Error querying Overpass API: {shape_data.status_code} {shape_data.reason}")
 
         if type (shape_data) is not dict or shape_data == {}:
-            if input ("Shape data is not available for this train. Continue processing without shape data? (Y/n)? ").lower () != "y":
+            if input ("Shape data is not available for this train. Continue processing without shape data (Y/n)? ").lower () != "y":
                 raise SystemExit ("Processing cancelled.")
         shape = []
         shape_data = list (shape_data.values ())

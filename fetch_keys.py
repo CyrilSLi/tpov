@@ -1,9 +1,9 @@
 # Built-in modules
-import time
+import re, threading, time
 
 # Third-party modules
 from playwright.sync_api import sync_playwright
-import threading
+import requests as r
 
 keys = {}
 
@@ -25,13 +25,10 @@ with sync_playwright () as p:
     baidu = threading.Thread (target = baidu_key)
     baidu.start ()
     print ("Starting Tianditu thread...")
-    browser = p.chromium.launch ()
-    page = browser.new_page ()
-    page.goto ("https://www.tianditu.gov.cn/")
-    keys ["tdt"] = page.evaluate ("TDT_CONFIG['maptoken']")
+    page = r.get ("https://www.tianditu.gov.cn/").text
+    keys ["tdt"] = re.search (r'(maptoken.+?")([0-9a-f]+)', page).group (2)
     print ("Tianditu thread finished.")
     baidu.join ()
     print ("Baidu thread finished.")
-    browser.close()
 
 print (f"Baidu: {keys ['baidu']}\nTianditu: {keys ['tdt']}")
