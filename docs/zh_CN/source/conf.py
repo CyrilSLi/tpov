@@ -9,7 +9,7 @@ import os
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'tpov'
-copyright = '2024, Cyril Li'
+copyright = '2025, Cyril Li'
 author = 'Cyril Li'
 release = '0.1.0'
 

@@ -28,6 +28,7 @@ It supports generating route and intersection information from an OpenStreetMap 
    troubleshooting
    match_params
    process_divided
+   utilities
 
 Indices and tables
 ==================

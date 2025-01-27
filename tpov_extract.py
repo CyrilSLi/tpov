@@ -472,7 +472,8 @@ def from_baidu (seckey = None, transfer = True, shape = False):
             trips = trips.json ()
             if "content" in trips and len (trips ["content"]) and "cla" in trips ["content"] [0]:
                 trips = [i for i in trips ["content"] if i ["cla"] and i ["cla"] [0] [0] == 903] # 公交线路tag
-                break
+                if len (trips):
+                    break
             print ("No results found. Try entering the route name in full.")
         else:
             raise ConnectionError (f"Error querying Baidu Maps API: {trips.status_code} {trips.reason}")
@@ -727,7 +728,7 @@ stop_name           Stop        Name of the stop
 stop_lat            Stop        Latitude of the stop
 stop_lon            Stop        Longitude of the stop
 
-The following core tags are included or excluded based on flags:
+The following core tags can be excluded based on flags:
 __transfer__        Stop        List of transfers at the stop
 __shape__           Global      Route shape coordinate list
 
@@ -739,7 +740,7 @@ parser.add_argument ("parameter", help = "Parameter to pass to the data source")
 parser.add_argument ("output", help = "Output filepath to write extracted data to")
 parser.add_argument ("-c", "--core-only", action = "store_true", help = "Only save core tags (see below for details)")
 parser.add_argument ("-t", "--no-transfer", action = "store_false", help = "Exclude the __transfer__ tag")
-parser.add_argument ("-s", "--shape", action = "store_true", help = "Include route shape data")
+parser.add_argument ("-s", "--no-shape", action = "store_false", help = "Exclude the __shape__ tag")
 
 def main (args):
     try:
@@ -748,7 +749,7 @@ def main (args):
         print (f"Data source '{args.source}' not supported. Run with -h for help.")
         raise SystemExit
 
-    trip, get_transfer = source (args.parameter, transfer = args.no_transfer, shape = args.shape)
+    trip, get_transfer = source (args.parameter, transfer = args.no_transfer, shape = args.no_shape)
     sel_stops (trip, open (args.output, "w"), args.core_only, get_transfer)
 
 def script (args):
