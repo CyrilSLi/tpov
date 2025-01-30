@@ -10,7 +10,7 @@
 
 ## 安装
 
-一个用于管理本教程的文件的项目文件夹将被创建。
+一个用于管理本教程所需文件的项目文件夹将被创建。
 
 **推荐使用Python 3.10以获得最佳兼容性, 且是是唯一测试过的版本。**
 
@@ -18,8 +18,7 @@
 git clone https://github.com/CyrilSLi/tpov
 cd tpov
 pip install -r requirements.txt
-mkdir quickstart_project
-cd quickstart_project
+mkdir .demo
 ```
 
 ### 命令行程序安装
@@ -37,7 +36,7 @@ cd quickstart_project
 把`path/to/mapfile`替换为地图文件的路径。
 
 ```bash
-python3.10 tpov_convert.py /path/to/mapfile ../tpov_filter.txt
+python3.10 tpov_convert.py /path/to/mapfile tpov_filter.txt
 ```
 
 过滤文件用于过滤地图中的不必要数据。`tpov_filter.txt` 应该适配大多数情况，但如需可修改。详情请见 [osmfilter wiki (英文)](https://wiki.openstreetmap.org/wiki/Osmfilter) 。
@@ -79,14 +78,16 @@ Select item(s):
 
 `tpov_extract.py` 用于提取公交路线的站点数据（名称、坐标、换乘信息等）。目前支持从GTFS、 OSM与百度地图提取数据。
 
+选择以下数据源之一提取站点数据。数据将被保存到项目目录中的 `stop_data.json`。
+
 ### GTFS
 
 GTFS是许多公交公司提供数据的常见格式。您通常可以从公交公司的网站或第三方数据源下载GTFS数据。如需请解压。
 
-**第一次运行此脚本时，将花费一些时间对数据进行排序和索引。**
+**第一次运行此脚本时，程序将花费一些时间对数据进行排序和索引。**
 
 ```bash
-python3.10 tpov_extract.py gtfs /path/to/gtfs ../stop_data.json
+python3.10 tpov_extract.py gtfs /path/to/gtfs .demo/stop_data.json
 ```
 ```
 Enter the route short_name or long_name:
@@ -106,7 +107,7 @@ Enter the time the vehicle left the first stop in HH(:mm)(:ss) format:
 站点数据可从OSM关系中提取。您可以在[OpenStreetMap](https://www.openstreetmap.org/)上搜索路线以获取关系ID。关系ID为URL末尾的数字。
 
 ```bash
-python3.10 tpov_extract.py osm relation_id ../stop_data.json
+python3.10 tpov_extract.py osm relation_id .demo/stop_data.json
 ```
 
 **使用此方法时请注意数据准确性。** 特别是在选择要包含的站点时，请注意 'Role' 列。一些关系有重复的站点，它们分别使用 'stop' 和 'platform' 的 role。
@@ -122,29 +123,29 @@ python3.10 tpov_extract.py osm relation_id ../stop_data.json
 - 复制返回的字符串。
 
 ```bash
-python3.10 tpov_extract.py baidu [SECKEY] ../stop_data.json
+python3.10 tpov_extract.py baidu [SECKEY] .demo/stop_data.json
 ```
 
 ## 匹配与截断GPS轨迹
 
-请将GPX文件移动到当前目录并重命名为 `track.gpx`。以下命令会将匹配的数据保存为 `track.matched.gpx`。
+请将GPX文件移到项目目录里并命名为 `track.gpx`。以下命令会将匹配的数据保存为 `track.matched.gpx`。
 
 ```bash
-python3.10 tpov_match.py ../match_params_zh.json track.gpx --map map.out.o5m --stop ../stop_data.json
+python3.10 tpov_match.py match_params_zh.json .demo/track.gpx --map map.out.o5m --stop .demo/stop_data.json
 ```
 
-`match_params_zh.json` 的文档将在以后提供。
+有关匹配参数的详细信息请参阅 [匹配参数文档](match_params.md)。
 
 轨迹需要截断与扩展以匹配视频（将 `/path/to/video` 替换为您录制的视频文件的路径）：
 
 ```bash
-python3.10 tpov_truncate.py track.matched.gpx -e /path/to/video
+python3.10 tpov_truncate.py .demo/track.matched.gpx -e /path/to/video
 ```
 
 以上命令使用 exiftool 提取视频开头和结尾时间。在继续操作之前，请检查确保时间准确并如需手动更正。所有时间均为UTC和ISO 8601格式（请注意时区）。您可以用以下命令手动输入时间：
 
 ```bash
-python3.10 tpov_truncate.py track.matched.gpx -t [开头时间] [结尾时间]
+python3.10 tpov_truncate.py .demo/track.matched.gpx -t [开头时间] [结尾时间]
 ```
 
 全部处理完的轨迹将被存为 `track.matched.truncated.gpx`。
@@ -158,13 +159,13 @@ python3.10 tpov_truncate.py track.matched.gpx -t [开头时间] [结尾时间]
 此模板适配 [Noto Sans CJK](https://github.com/googlefonts/noto-cjk/raw/main/Sans/Variable/OTC/NotoSansCJK-VF.otf.ttc) 字体，但其他字体可以适用。请将 `NotoSansCJK-VF` 替换为您想使用的字体的文件路径。
 
 ```bash
-gopro-dashboard.py --use-gpx-only --units-speed kph --units-altitude m --units-distance km --font NotoSansCJK-VF --profile overlay --overlay-size 1920x1080 --layout-xml ../tpov_layout_zh.xml overlay.mov --gpx track.matched.truncated.gpx --map-api-key KEY
+gopro-dashboard.py --use-gpx-only --units-speed kph --units-altitude m --units-distance km --font NotoSansCJK-VF --profile overlay --overlay-size 1920x1080 --layout-xml tpov_layout_zh.xml .demo/overlay.mov --gpx .demo/track.matched.truncated.gpx --map-api-key KEY
 ```
 
 如果您不想进一步编辑视频，可替代使用以下命令将叠加与视频合并（将 `/path/to/video` 替换为您录制的视频文件的路径）：
 
 ```bash
-gopro-dashboard.py --use-gpx-only --units-speed kph --units-altitude m --units-distance km --font NotoSansCJK-VF --overlay-size 1920x1080 --layout-xml ../tpov_layout_zh.xml /path/to/video overlay.mp4 --gpx track.matched.truncated.gpx --map-api-key KEY
+gopro-dashboard.py --use-gpx-only --units-speed kph --units-altitude m --units-distance km --font NotoSansCJK-VF --overlay-size 1920x1080 --layout-xml tpov_layout_zh.xml /path/to/video .demo/overlay.mp4 --gpx .demo/track.matched.truncated.gpx --map-api-key KEY
 ```
 
 `kph`, `m`, 与 `km` 可被替换为其他单位。在 [gopro-dashboard-overlay 文档 (英文)](https://github.com/time4tea/gopro-dashboard-overlay/tree/main/docs/xml/examples/04-metrics#conversions) 中列举了可选的单位。

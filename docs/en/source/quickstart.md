@@ -9,7 +9,7 @@ Make sure to record a GPS track of the route you are recording and export it as 
 
 ## Installation
 
-A project folder will be created to organize the files for this tutorial.
+A demo directory will be created to organize the files for this tutorial.
 
 **Python 3.10 is recommended for the best compatibility and is the only version tested.**
 
@@ -17,8 +17,7 @@ A project folder will be created to organize the files for this tutorial.
 git clone https://github.com/CyrilSLi/tpov
 cd tpov
 pip install -r requirements.txt
-mkdir quickstart_project
-cd quickstart_project
+mkdir .demo
 ```
 
 ### Command-line prerequisites
@@ -34,7 +33,7 @@ Download the map of the area you are recording from [OpenStreetMap](https://www.
 Use `tpov_convert.py` to convert the map file to a format that can be used by the library. This will create a file ending in `.out.o5m` in the current directory. For this tutorial, please rename the output file to `map.out.o5m`.
 
 ```bash
-python3.10 tpov_convert.py /path/to/mapfile ../tpov_filter.txt
+python3.10 tpov_convert.py /path/to/mapfile tpov_filter.txt
 ```
 
 The filter file is used to filter out unnecessary data from the map. The sample filter file `tpov_filter.txt` should be sufficient for most cases, but you can modify it if necessary. Read the [osmfilter wiki](https://wiki.openstreetmap.org/wiki/Osmfilter) for more information.
@@ -76,7 +75,7 @@ Examples:
 
 `tpov_extract.py` is used to extract stop data of a transit route (e.g. names, coordinates, transfers, etc). It can currently extract data from GTFS feeds, OSM relations, and Baidu Maps.
 
-Choose one of the following methods to extract stop data: The data will be saved as `stop_data.json` in the current directory.
+Choose one of the following methods to extract stop data: The data will be saved as `stop_data.json` in the demo directory.
 
 ### GTFS
 
@@ -85,7 +84,7 @@ GTFS is a common format used by many transit agencies to provide data on their s
 **Note: The first time you run this script, it will take a while to sort and index the data.**
 
 ```bash
-python3.10 tpov_extract.py gtfs /path/to/gtfs ../stop_data.json
+python3.10 tpov_extract.py gtfs /path/to/gtfs .demo/stop_data.json
 ```
 ```
 Enter the route short_name or long_name:
@@ -104,7 +103,7 @@ Enter the time in 24-hour format. Approximate values such as `15` (hour) or `15:
 Stop data can be extracted from an OSM relation. You can find the relation ID by searching for the route on [OpenStreetMap](https://www.openstreetmap.org/). The relation ID is the number at the end of the URL.
 
 ```bash
-python3.10 tpov_extract.py osm relation_id ../stop_data.json
+python3.10 tpov_extract.py osm relation_id .demo/stop_data.json
 ```
 
 **Be careful when using this method as the data may not be accurate.** In particular, pay attention to the 'Role' column when selecting stops to include as some relations have duplicate stops with 'stop' and 'platform' roles.
@@ -120,29 +119,29 @@ Baidu Maps usually has the most accurate data for routes in China. You will need
 - Copy the value returned. It should be a long string of characters.
 
 ```bash
-python3.10 tpov_extract.py baidu [SECKEY] ../stop_data.json
+python3.10 tpov_extract.py baidu [SECKEY] .demo/stop_data.json
 ```
 
 ## Matching and Truncating the GPS Track
 
-For this tutorial, please move the GPX file to the current directory and rename it to `track.gpx`. The following command will save the matched data as `track.matched.gpx`.
+For this tutorial, please move the GPX file to the demo directory and rename it to `track.gpx`. The following command will save the matched data as `track.matched.gpx`.
 
 ```bash
-python3.10 tpov_match.py ../match_params.json track.gpx --map map.out.o5m --stop ../stop_data.json
+python3.10 tpov_match.py match_params.json .demo/track.gpx --map map.out.o5m --stop .demo/stop_data.json
 ```
 
-Documentation for `match_params.json` will be provided in the near future.
+See the [match_params documentation](match_params.md) for more information on the parameters.
 
 The track needs to be truncated and/or extended to match the video (replace `/path/to/video` with the path to your video file):
 
 ```bash
-python3.10 tpov_truncate.py track.matched.gpx -e /path/to/video
+python3.10 tpov_truncate.py .demo/track.matched.gpx -e /path/to/video
 ```
 
 The script above uses exiftool to extract the start and end times. Make sure to review the times before proceeding and correct them manually if necessary. All times are in UTC and ISO 8601 format (be careful with time zones). You can input the times manually as follows:
 
 ```bash
-python3.10 tpov_truncate.py track.matched.gpx -t [Start time] [End time]
+python3.10 tpov_truncate.py .demo/track.matched.gpx -t [Start time] [End time]
 ```
 
 The final processed track will be saved as `track.matched.truncated.gpx`.
@@ -154,13 +153,13 @@ The following command will use [gopro-dashboard-overlay](https://github.com/Cyri
 This template is tested with the [Noto Sans CJK](https://github.com/googlefonts/noto-cjk/raw/main/Sans/Variable/OTC/NotoSansCJK-VF.otf.ttc) font, however other fonts probably work as well. Replace `NotoSansCJK-VF` with the filepath of the font you want to use.
 
 ```bash
-gopro-dashboard.py --use-gpx-only --units-speed kph --units-altitude m --units-distance km --font NotoSansCJK-VF --profile overlay --overlay-size 1920x1080 --layout-xml ../tpov_layout.xml overlay.mov --gpx track.matched.truncated.gpx
+gopro-dashboard.py --use-gpx-only --units-speed kph --units-altitude m --units-distance km --font NotoSansCJK-VF --profile overlay --overlay-size 1920x1080 --layout-xml tpov_layout.xml .demo/overlay.mov --gpx .demo/track.matched.truncated.gpx
 ```
 
 If you don't want to further edit the video, you can use the following command instead to combine the overlay with the video (replace `/path/to/video` with the path to your video file):
 
 ```bash
-gopro-dashboard.py --use-gpx-only --units-speed kph --units-altitude m --units-distance km --font NotoSansCJK-VF --overlay-size 1920x1080 --layout-xml ../tpov_layout.xml /path/to/video overlay.mp4 --gpx track.matched.truncated.gpx
+gopro-dashboard.py --use-gpx-only --units-speed kph --units-altitude m --units-distance km --font NotoSansCJK-VF --overlay-size 1920x1080 --layout-xml tpov_layout.xml /path/to/video .demo/overlay.mp4 --gpx .demo/track.matched.truncated.gpx
 ```
 
 Replace the `kph`, `m`, and `km` arguments with other units if you prefer. A list of available units can be found in the [gopro-dashboard-overlay documentation](https://github.com/time4tea/gopro-dashboard-overlay/tree/main/docs/xml/examples/04-metrics#conversions).
