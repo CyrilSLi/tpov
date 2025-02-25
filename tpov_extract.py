@@ -1,6 +1,5 @@
 # Built-in modules:
 import os, bisect, json, csv, argparse, pickle, subprocess, re, hashlib, time, threading
-from urllib.parse import urlparse
 from zoneinfo import ZoneInfo
 
 from tpov_functions import *
@@ -449,8 +448,6 @@ def from_baidu (seckey = None, transfer = True, shape = False):
     from coord_convert.transform import bd2wgs
     from bd09convertor import convertMC2LL as mc2ll
 
-    if not seckey:
-        print ("No seckey provided. Some information may be missing.")
     key = lambda url: url + f"&seckey={seckey}" if seckey and seckey.lower () != "none" else url # Append seckey if provided
     headers = {
         "Host": "map.baidu.com",
@@ -459,39 +456,68 @@ def from_baidu (seckey = None, transfer = True, shape = False):
     }
     strip_geo = lambda geo: geo.rstrip (";").split ("|") [-1].split (",")
 
-    while True:
-        wd = input ("Enter the route name: ")
-        if not wd:
-            raise ValueError ("Route name cannot be empty.")
-        c = input ("Enter the city or district in Chinese: ")
-        if not c:
-            raise ValueError ("City or district cannot be empty.")
+    trips = None
+    if not seckey:
+        print ("No seckey provided. Some information may be missing.")
+    elif re.search (r"^tpov-[0-9a-f]{24}-", seckey) is None:
+        while True:
+            wd = input ("Enter the route name: ")
+            if not wd:
+                raise ValueError ("Route name cannot be empty.")
+            c = input ("Enter the city or district in Chinese: ")
+            if not c:
+                raise ValueError ("City or district cannot be empty.")
 
-        trips = req.get (key (f"https://maps.baidu.com/?qt=s&wd={wd}&c={c}"), headers = headers)
-        if trips.status_code == 200:
-            trips = trips.json ()
-            if "content" in trips and len (trips ["content"]) and "cla" in trips ["content"] [0]:
-                trips = [i for i in trips ["content"] if i ["cla"] and i ["cla"] [0] [0] == 903] # 公交线路tag
-                if len (trips):
-                    break
-            print ("No results found. Try entering the route name in full.")
-        else:
-            raise ConnectionError (f"Error querying Baidu Maps API: {trips.status_code} {trips.reason}")
-    
-    choicetable (
-        ["Name", "ID"],
-        ([i ["name"], i ["uid"]] for i in trips)
-    )
-    line = next (choice (trips, "Select one route: ", 1, 1))
-
-    trip = req.get (key (f"https://map.baidu.com/?qt=bsl&c={c}&uid={line ['uid']}"), headers = headers)
-    if trip.status_code == 200:
-        trip = trip.json ()
-        if not ("content" in trip and len (trip ["content"])):
-            raise ValueError ("No stop information found. Try providing a seckey.")
-        trip = trip ["content"] [0]
+            trips = req.get (key (f"https://maps.baidu.com/?qt=s&wd={wd}&c={c}"), headers = headers)
+            if trips.status_code == 200:
+                trips = trips.json ()
+                if "content" in trips and len (trips ["content"]) and "cla" in trips ["content"] [0]:
+                    trips = [i for i in trips ["content"] if i ["cla"] and i ["cla"] [0] [0] == 903] # 公交线路tag
+                    if len (trips):
+                        break
+                print ("No results found. Try entering the route name in full.")
+            else:
+                raise ConnectionError (f"Error querying Baidu Maps API: {trips.status_code} {trips.reason}")
+        
+        choicetable (
+            ["Name", "ID"],
+            ([i ["name"], i ["uid"]] for i in trips)
+        )
+        line = next (choice (trips, "Select one route: ", 1, 1))
     else:
-        raise ConnectionError (f"Error querying Baidu Maps API: {trip.status_code} {trip.reason}")
+        seckey = seckey.removeprefix ("tpov-")
+        line = {"uid": seckey.split ("-") [0]} # Line ID is provided
+        c = seckey.split ("-") [1] # City is provided
+        if len (seckey.split ("-")) > 2:
+            key = lambda url: url + f"&seckey={seckey.split ('-', 2) [2]}" # Append seckey if provided
+        print (c, line ["uid"], key (""))
+
+    trip, re_fetched = None, False
+    while not trip:
+        trip = req.get (key (f"https://map.baidu.com/?qt=bsl&c={c}&uid={line ['uid']}"), headers = headers)
+        if trip.status_code == 200:
+            trip = trip.json ()
+            if not ("content" in trip and len (trip ["content"])):
+                raise ValueError ("No stop information found. Try providing a seckey.")
+            trip = trip ["content"] [0]
+        else:
+            raise ConnectionError (f"Error querying Baidu Maps API: {trip.status_code} {trip.reason}")
+        
+        if re_fetched or trips: # Only need to query when line is provided via seckey
+            break
+    
+        choicetable (
+            ["Name", "Direction", "ID"],
+            (
+                [trip ["name"], trip ["line_direction"], trip ["uid"]],
+                [trip ["pair_line"] ["name"], trip ["pair_line"] ["direction"], trip ["pair_line"] ["uid"]]
+            )
+        )
+        trip, line = next (choice ((
+            (trip, line), # If user selects the current direction, no need to query again
+            (None, {"uid": trip ["pair_line"] ["uid"]}) # If user selects the opposite direction, query again
+        ), "Select one direction: ", 1, 1))
+        re_fetched = True
 
     line_geo = strip_geo (trip.pop ("geo")) # Line geometry
     
@@ -704,6 +730,8 @@ sources = {
     "12306": from_12306
 }
 
+ext_table = None # TODO: texttable
+
 parser = argparse.ArgumentParser (
     description = "Extract route and stop data from transit data sources",
     formatter_class = argparse.RawDescriptionHelpFormatter,
@@ -714,6 +742,9 @@ GTFS        GTFS directory  /path/to/gtfs (unzipped)
 OSM         Relation ID     1234567
 BAIDU       Seckey          a1b2c3... ('none' to exclude)
 12306       None            N/A
+
+Any installed extension data sources are shown here:
+{exts}
 
 Core tags are consistent across all data sources:
 (note that identifiers are only unique within the data source)
@@ -733,7 +764,7 @@ __transfer__        Stop        List of transfers at the stop
 __shape__           Global      Route shape coordinate list
 
 Non-core tags may vary and are specific to each data source.
-"""
+""".format (exts = "") # ext_table.draw ())
 )
 parser.add_argument ("source", help = "Data source to extract from")
 parser.add_argument ("parameter", help = "Parameter to pass to the data source")
