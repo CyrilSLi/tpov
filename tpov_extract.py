@@ -490,7 +490,6 @@ def from_baidu (seckey = None, transfer = True, shape = False):
         c = seckey.split ("-") [1] # City is provided
         if len (seckey.split ("-")) > 2:
             key = lambda url: url + f"&seckey={seckey.split ('-', 2) [2]}" # Append seckey if provided
-        print (c, line ["uid"], key (""))
 
     trip, re_fetched = None, False
     while not trip:
@@ -505,7 +504,10 @@ def from_baidu (seckey = None, transfer = True, shape = False):
         
         if re_fetched or trips: # Only need to query when line is provided via seckey
             break
-    
+        elif not trip ["pair_line"]:
+            print ("Info - Line only has one direction.")
+            break
+
         choicetable (
             ["Name", "Direction", "ID"],
             (
@@ -690,6 +692,111 @@ def from_12306 (_ = None, transfer = True, shape = False):
 
     return trip, get_transfer if transfer else lambda x: None
 
+def from_macau (shape_dir = None, transfer = True, shape = False):
+    # Built-in modules:
+    from zipfile import ZipFile
+
+    # Third-party modules:
+    import shapefile, xlrd
+    from pyproj import Proj, Transformer
+
+    if not shape_dir:
+        raise ValueError ("Shape directory cannot be empty.")
+    zip_file = ZipFile (shape_dir)
+
+    get_file = lambda path: zip_file.open ((i for i in zip_file.namelist () if path in i).__next__ ())
+    pole = shapefile.Reader (shp = get_file ("BUS_POLE.shp"), dbf = get_file ("BUS_POLE.dbf"), shx = get_file ("BUS_POLE.shx"))
+    network = shapefile.Reader (shp = get_file ("ROUTE_NETWORK.shp"), dbf = get_file ("ROUTE_NETWORK.dbf"), shx = get_file ("ROUTE_NETWORK.shx"))
+    route_seq = xlrd.open_workbook (file_contents = get_file ("BUS_ROUTE_SEQ.xls").read ()).sheet_by_index (0)
+    to_wgs = Transformer.from_proj (Proj ("EPSG:8433"), Proj ("EPSG:4326"), always_xy = True).transform
+
+    keys = route_seq.row_values (0)
+    routes = route_seq.col_values (keys.index ("ROUTE_NO"), 1) # Route numbers
+    points = {}
+    for i in pole.shapeRecords ():
+        wgs_point = to_wgs (*i.shape.points [0])
+        data = { # Coordinates
+            "stop_lon": wgs_point [0],
+            "stop_lat": wgs_point [1]
+        }
+        data.update (i.record.as_dict ()) # Attributes]
+        data = renamedict (data, {
+            "POLE_ID": "stop_id",
+            "NAME": "stop_name"
+        })
+        if transfer:
+            data ["__transfer__"] = data.pop ("ROUTE_NOS").split (",")
+        points [data ["stop_id"]] = data
+
+    while True:
+        route_no = input ("Enter the route number: ").upper ()
+        if not route_no:
+            raise ValueError ("Route number cannot be empty.")
+        elif route_no not in routes:
+            print ("Route number not found. Please try again.")
+        else:
+            break
+
+    directions, shape_segs, route_ids, trip = {}, {}, {}, {}
+    for j, i in enumerate (route_seq.col_values (0)):
+        if i != route_no:
+            continue
+        row_dict = {k: v for k, v in zip (keys, route_seq.row_values (j))} # Map keys to values
+
+        if row_dict ["POLE_ID"] == "" and row_dict ["NETWORK_ID"] != "": # Shape segment
+            shape_segs.setdefault (row_dict ["ROUTE_ID"], []).append ((int (row_dict ["SEQ"]), int (row_dict ["NETWORK_ID"])))
+        elif row_dict ["NETWORK_ID"] == "" and row_dict ["POLE_ID"] != "": # Stop
+            if not trip:
+                trip = {
+                    "__sourcetype__": "MACAU",
+                    "route_long_name": row_dict ["NAME"],
+                    "route_short_name": row_dict ["ROUTE_NO"],
+                    "agency_name": row_dict ["COMPANY_NAME"],
+                    "__stops__": []
+                }
+                trip.update (dict ([(k, row_dict [k]) for k in (
+                    "COMPANY_NAME_POR", "COMPANY_NAME_EN",
+                    "NAME_POR", "NAME_EN",
+                    "REMARKS", "REMARKS_POR", "REMARKS_EN"
+                )]))
+            directions.setdefault (row_dict ["DIRECTION"], []).append ((int (row_dict ["SEQ"]), int (row_dict ["POLE_ID"])))
+            route_ids [row_dict ["DIRECTION"]] = row_dict ["ROUTE_ID"]
+        else:
+            raise ValueError ("Exactly one of NETWORK_ID and POLE_ID must be present.")
+
+    # (direction, stop_id0, stop_id1, ...)
+    directions = tuple (((k, ) + tuple (i [1] for i in sorted (v, key = lambda x: x [0]))) for k, v in directions.items ())
+    if len (directions) != 1:
+        choicetable (
+            ["Direction", "From", "To", "Trip ID"],
+            ([
+                i [0],
+                points [i [1]] ["stop_name"],
+                points [i [-1]] ["stop_name"],
+                route_ids [i [0]]
+            ] for i in directions)
+        )
+        direction = next (choice (directions, "Select one direction: ", 1, 1))
+    else:
+        print ("Info - Line only has one direction.")
+        direction = directions [0]
+
+    shape_segs = tuple (i [1] for i in sorted (shape_segs [route_ids [direction [0]]], key = lambda x: x [0]))
+    trip.update ({
+        "route_id": route_ids [direction [0]],
+        "DIRECTION": direction [0],
+        "__stops__": [points [i] for i in direction [1 : ]]
+    })
+
+    if shape:
+        shape = [[] for _ in shape_segs]
+        for i in network.shapeRecords ():
+            if i.record ["NETWORK_ID"] in shape_segs:
+                shape [shape_segs.index (i.record ["NETWORK_ID"])].extend (to_wgs (*j) for j in i.shape.points)
+        trip ["__shape__"] = [i for j in shape for i in j] # Flatten
+
+    return trip, lambda x: None # Transfer already included in the data
+
 def sel_stops (trip, json_out = None, core_only = False, get_transfer = lambda x: None):
     fields = _stop_fields.get (trip ["__sourcetype__"].upper (), _stop_fields ["__default__"])
     choicetable (
@@ -727,10 +834,9 @@ sources = {
     "OSM": from_osm,
     "TIANDITU": from_tianditu,
     "BAIDU": from_baidu,
-    "12306": from_12306
+    "12306": from_12306,
+    "MACAU": from_macau
 }
-
-ext_table = None # TODO: texttable
 
 parser = argparse.ArgumentParser (
     description = "Extract route and stop data from transit data sources",
@@ -742,9 +848,7 @@ GTFS        GTFS directory  /path/to/gtfs (unzipped)
 OSM         Relation ID     1234567
 BAIDU       Seckey          a1b2c3... ('none' to exclude)
 12306       None            N/A
-
-Any installed extension data sources are shown here:
-{exts}
+MACAU       ShapeFile       /path/to/shape.zip
 
 Core tags are consistent across all data sources:
 (note that identifiers are only unique within the data source)
@@ -764,7 +868,7 @@ __transfer__        Stop        List of transfers at the stop
 __shape__           Global      Route shape coordinate list
 
 Non-core tags may vary and are specific to each data source.
-""".format (exts = "") # ext_table.draw ())
+"""
 )
 parser.add_argument ("source", help = "Data source to extract from")
 parser.add_argument ("parameter", help = "Parameter to pass to the data source")

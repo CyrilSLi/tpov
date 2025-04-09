@@ -24,7 +24,7 @@ Not all videos have the required metadata to determine the start and end time.
 See https://tpov.readthedocs.io/en/latest/ for the metadata required and what to do if it is missing.
 """
 )
-parser.add_argument ("output", help = "Output directory")
+parser.add_argument ("output", help = "Output filename")
 parser.add_argument ("segment", nargs = "+", help = "List of video segments to combine")
 
 def main (args):
