@@ -41,6 +41,7 @@ class lmmHandler (osmium.SimpleHandler):
             self.node_cnt = None
             self.way_cnt = tqdm (total = int (self.stats.get ("ways", 0)), desc = "Reading ways", mininterval = 0.5)
         self.tags [w.id] = dict (w.tags)
+        self.tags [w.id].setdefault ("highway", "unknown") # Default highway type
         if w.tags.get ("oneway") != "-1":
             for i, j in zip (tuple (w.nodes), tuple (w.nodes) [1 : ]):
                 self.map_con.add_edge (i.ref, j.ref)

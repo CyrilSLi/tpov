@@ -2,7 +2,7 @@
     "map_matcher": "SimpleMatcher",
     "stop_matcher": "NaiveStopMatcher",
     "use_rtree": false,
-    "exit_filter": "way ['highway'] != 'service' and not way ['highway'].endswith ('_link')",
+    "exit_filter": "way ['highway'] not in ('service', 'unknown') and not way ['highway'].endswith ('_link')",
     "default_name": "无名路",
     "forward_angle": 45,
     "follow_link": "%n辅路",

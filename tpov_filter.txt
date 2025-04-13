@@ -17,6 +17,8 @@ highway=motorway
 =busway
 and
 service!=driveway
+or
+route=ferry
 
 --drop-relations
 

@@ -37,6 +37,10 @@ def main (args):
     if o5m_file != map_file:
         os.remove (o5m_file)
         print (f"Deleted temporary file {o5m_file}")
+    if os.path.exists (output_file + ".pkl"): # Old pickle file
+        if input (f"Old pickle file {output_file}.pkl exists. Delete it? (Y/n) ").lower () == "y":
+            os.remove (output_file + ".pkl")
+            print (f"Deleted old pickle file {output_file}.pkl")
 
 parser = argparse.ArgumentParser (
     description = "Convert and filter OSM map files for use with tpov_match.py",
