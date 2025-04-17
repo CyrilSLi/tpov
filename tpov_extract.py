@@ -581,7 +581,8 @@ def from_baidu (seckey = None, transfer = True, shape = False):
                 transfers [i ["stop_id"]] = tuple (dict.fromkeys (i ["__transfer__"])) # Remove duplicates while preserving order
                 close_transfers [i ["stop_id"]] = tuple (dict.fromkeys (i ["__close_transfer__"]))
             else:
-                raise ValueError ("No transfer information found. Try providing a seckey.")
+                print (f"Warning - No transfer information found for {i ['stop_name']}, ID: {i ['stop_id']}. Try providing a seckey.")
+                transfers [i ["stop_id"]], close_transfers [i ["stop_id"]] = (), ()
 
         for i in _trip ["__stops__"]:
             threadpool.append (threading.Thread (target = stop_transfer, args = (i, )))

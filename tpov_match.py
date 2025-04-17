@@ -52,6 +52,21 @@ class lmmHandler (osmium.SimpleHandler):
                 self.tags [struct.pack ("<Q", i.ref) + struct.pack ("<Q", j.ref)] = w.id
         self.way_cnt.update ()
 
+class startWayHandler (osmium.SimpleHandler):
+    class WayFound (Exception):
+        pass
+    def __init__ (self, way_id, stats = {}):
+        super (startWayHandler, self).__init__ ()
+        self.way_id = way_id
+        self.way_cnt = tqdm (total = int (stats.get ("ways", 0)), desc = "Finding start way", mininterval = 0.5)
+        self.nodes = None
+    def way (self, w):
+        if w.id == self.way_id:
+            self.nodes = tuple ((i.ref for i in w.nodes))
+            self.way_cnt.close ()
+            raise self.WayFound ()
+        self.way_cnt.update ()
+
 # Visualize each intersection and action (e.g. process_divided) in a HTML file with a map background
 class HTMLVisualizer:
     def __init__ (self, lat, lon, template, combine_duplicates = True):
@@ -86,6 +101,7 @@ class HTMLVisualizer:
 def match_gpx (
     gpx_path,
     map_path,
+    start_id,
     matcher_cls = "SimpleMatcher", # Matcher class
     use_rtree = False, # Whether to use rtree in InMemMap (slow)
     exit_filter = lambda way: True, # Filter for intersection exits
@@ -118,12 +134,28 @@ def match_gpx (
             info = "<br>".join (f"{k}: {v}" for k, v in info.items ())
             visualizer.add_marker (node, lat, lon, template.format (title = title, node = node, lat = lat, lon = lon, info = info))
 
+    # Get number of ways and nodes in the map
+    def map_stats ():
+        stats = subprocess.run (["osmconvert", map_path, "--out-statistics"], capture_output = True)
+        stats.check_returncode ()
+        return {i.split (": ") [0]: i.split (": ") [1] for i in stats.stdout.decode ().split ("\n") if i}
+
     if not os.path.exists (map_path):
         raise FileNotFoundError ("Could not find map file.")
     
-    # Test for processed file (.filtered.o5m) and/or pickled index (.pkl)
+    # Test for processed file (.filtered.o5m)
     if os.path.exists (os.path.splitext (map_path) [0] + ".filtered.o5m"):
         map_path = os.path.splitext (map_path) [0] + ".filtered.o5m"
+
+    if start_id:
+        handler = startWayHandler (int (start_id), map_stats ())
+        try:
+            handler.apply_file (map_path)
+        except startWayHandler.WayFound:
+            pass
+        if handler.nodes is None:
+            raise ValueError (f"Start way {start_id} not found in map file.")
+
     if os.path.exists (map_path + ".pkl"):
         map_path = map_path + ".pkl"
 
@@ -135,10 +167,7 @@ def match_gpx (
             print ("Done")
     else:
         print ("Loading map from OSM file...")
-        stats = subprocess.run (["osmconvert", map_path, "--out-statistics"], capture_output = True)
-        stats.check_returncode ()
-        stats = {i.split (": ") [0]: i.split (": ") [1] for i in stats.stdout.decode ().split ("\n") if i}
-
+        stats = map_stats ()
         handler = lmmHandler (InMemMap (map_path, use_latlon = True, index_edges = True, use_rtree = use_rtree), stats)
         handler.apply_file (map_path)
         map_con, tags = handler.map_con, handler.tags
@@ -148,7 +177,22 @@ def match_gpx (
         print (f"Saved pickle to {map_path}.pkl")
 
     print (f"Running {matcher_cls.__name__}...")
-    matcher = matcher_cls (map_con, **matcher_params)
+    if start_id:
+        start_con = map_con.serialize ()
+        start_graph = {}
+        for i in handler.nodes: # Hack to only keep start way nodes
+            start_graph [i] = (
+                start_con ["graph"] [i] [0],
+                [j for j in start_con ["graph"] [i] [1] if j in handler.nodes] # Remove neighbours not on the start way
+            )
+        start_con ["graph"] = start_graph
+        start_con = InMemMap.deserialize (start_con)
+        matcher = matcher_cls (start_con, **matcher_params)
+        _, lastidx = matcher.match ([(i.latitude, i.longitude, i.time) for i in points], tqdm = tqdm)
+        print (f"Matched {lastidx} points on start way {start_id}")
+        start_con.graph = map_con.graph # Restore original graph
+    else:
+        matcher = matcher_cls (map_con, **matcher_params)
 
     _, lastidx = matcher.match([(i.latitude, i.longitude, i.time) for i in points], tqdm = tqdm)
     if lastidx < len (points) - 1:
@@ -684,8 +728,9 @@ parser = argparse.ArgumentParser (
 )
 parser.add_argument ("params", help = "Path to JSON parameter file")
 parser.add_argument ("gpx", help = "Path to .gpx track file")
-parser.add_argument ("--map", help = "Path to .o5m map file")
+parser.add_argument ("--map", metavar = "file", help = "Path to .o5m map file")
 parser.add_argument ("--stop", metavar = "JSON", help = "Path to stop data")
+parser.add_argument ("--start", metavar = "ID", help = "Start node or way of the track")
 
 def main (args):
     params = json.load (open (args.params, "r"))
@@ -712,6 +757,7 @@ def main (args):
         dirs, lattice_best, map_con, visualizer = match_gpx (
             gpx_path = args.gpx,
             map_path = args.map,
+            start_id = args.start,
             matcher_cls = map_matcher,
             use_rtree = use_rtree,
             exit_filter = exit_filter,
