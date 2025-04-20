@@ -197,7 +197,7 @@ def match_gpx (
     _, lastidx = matcher.match([(i.latitude, i.longitude, i.time) for i in points], tqdm = tqdm)
     if lastidx < len (points) - 1:
         if not lastidx: # No points matched - likely due to origin being too far from a road
-            raise SystemExit ("No points matched. Try increasing max_dist_init in the matcher parameters.")
+            raise SystemExit ("No points matched. Try increasing max_dist_init in the matcher parameters or setting a start way.")
         last_l1, last_l2 = matcher.lattice_best [lastidx].edge_m.l1, matcher.lattice_best [lastidx].edge_m.l2
         if input (
             f"Not all points were matched. Last matched {last_l1} -> {last_l2} at ({map_con.graph [last_l1] [0] [1]}, {map_con.graph [last_l1] [0] [0]})."
@@ -226,6 +226,58 @@ def match_gpx (
         nonlocal map_con
         return gpxpy.geo.Location (map_con.graph [node2] [0] [1], map_con.graph [node2] [0] [0]).distance_2d (
                gpxpy.geo.Location (map_con.graph [node1] [0] [1], map_con.graph [node1] [0] [0]))
+
+    # Find loops (either U-turns or matching errors)
+    curr_index = 0
+    curr_edge = (matcher.lattice_best [0].edge_m.l1, matcher.lattice_best [0].edge_m.l2)
+    # [(edge, start point, end point), ...] end point is exclusive
+    edges = []
+    for i in range (len (matcher.lattice_best)):
+        edge = (matcher.lattice_best [i].edge_m.l1, matcher.lattice_best [i].edge_m.l2)
+        if edge != curr_edge:
+            edges.append ((curr_edge, curr_index, i))
+            curr_edge, curr_index = edge, i
+    edges.append ((curr_edge, curr_index, len (matcher.lattice_best))) # Add last edge
+
+    # [[start point, end point, start node, end node, length in m, road name(s)], ...]
+    loops = []
+    for j, i in enumerate (edges [ : -1]):
+        length, length_m, names = 0, 0, []
+        while set (edges [j - length] [0]) == set (edges [j + length + 1] [0]) and j - length >= 0 and j + length + 1 < len (edges):
+            nodes = edges [j - length] [0] # two nodes of the edge
+            length_m += node_distance (*nodes)
+            names.append (tags [tags [struct.pack ("<Q", nodes [0]) + struct.pack ("<Q", nodes [1])]].get ("name", default_name))
+            length += 1
+        length -= 1 # Remove last iteration
+        if length >= 0:
+            loops.append ((
+                edges [j - length] [1],
+                edges [j + length + 1] [2],
+                edges [j - length] [0] [0],
+                edges [j] [0] [1],
+                format (length_m, ".4f"),
+                ", ".join (dict.fromkeys (names)), # Remove duplicates
+                edges [j] [2], # Middle point of the loop
+            ))
+
+    if loops:
+        choicetable (
+            ["Start Point", "End Point", "Start Node", "End Node", "Length", "Road Name(s)"],
+            [i [ : 6] for i in loops]
+        )
+        print ("Select any loops to remove if they are matching error ans not U-turns.")
+        remove = list (choice (loops, "(Press Enter if you don't understand): "))
+        for i in remove:
+            if i [0] == 0:
+                midpoint = i [0] # Fill all edges from the back
+            elif i [1] == len (matcher.lattice_best):
+                midpoint = i [1] # Fill all edges from the front
+            else:
+                midpoint = i [6] # Fill half from the front and half from the back
+            for j in range (i [0], midpoint):
+                matcher.lattice_best [j] = matcher.lattice_best [i [0] - 1]
+            for j in range (midpoint, i [1]):
+                matcher.lattice_best [j] = matcher.lattice_best [i [1]]
 
     def divided_process (case, dest, orig, *, orig_id = None, orig_angle = None, lattice_index = None):
         # Return true if action should be taken (e.g. ignore exit, add exit), false otherwise
@@ -445,7 +497,6 @@ def match_gpx (
                 if dest == matcher.lattice_best [j].edge_m.l1:
                     if dest != i.edge_m.l2:
                         continue # Skip previous road
-                    print (f"Warning: Loop detected at node {orig} (may be a U-turn)")
                     add_marker (orig, {}, "Warning: Loop detected")
                 elif not (exit_filter (way) or dest == i.edge_m.l2):
                     continue # Use filter to exclude certain exits not leading to the next road

@@ -27,7 +27,7 @@
     },
     "matcher_params": {
         "max_dist": 100,
-        "max_dist_init": 75,
+        "max_dist_init": 100,
         "min_prob_norm": 0.001,
         "non_emitting_length_factor": 0.5,
         "obs_noise": 50,
@@ -44,5 +44,5 @@
         "bar_reverse": true,
         "use_reference": false
     },
-    "visu_template": "visualization_template_zh.html"
+    "visu_template": "visualization_template.html"
 }
