@@ -287,7 +287,7 @@ def match_gpx (
             ["Start Point", "End Point", "Start Node", "End Node", "Length", "Road Name(s)"],
             [i [ : 6] for i in loops]
         )
-        print ("Select any loops to remove if they are matching error ans not U-turns.")
+        print ("Select any loops to remove if they are matching errors and not U-turns.")
         remove = list (choice (loops, "(Press Enter if you don't understand): "))
         for i in remove:
             if i [0] == 0:
