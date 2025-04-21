@@ -13,6 +13,7 @@ media/*
 *.json
 *.html
 *.txt
+*.gpx
 
 !tpov_filter.txt
 !tpov_commands.json

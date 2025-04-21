@@ -96,9 +96,6 @@
                 }
             ]
         },
-        "visualize": {
-            "type": "boolean"
-        },
         "hw_priority": {
             "type": "object",
             "additionalProperties": {
@@ -137,10 +134,41 @@
                 }
             ]
         },
-        "visu_template": {
-            "type": "string"
+        "visu_params": {
+            "type": "object",
+            "oneOf": [
+                {
+                    "type": "object",
+                    "properties": {
+                        "visualizer": {
+                            "type": "string",
+                            "enum": ["HTMLVisualizer"]
+                        },
+                        "template": {
+                            "type": "string"
+                        }
+                    },
+                    "additionalProperties": false,
+                    "required": ["visualizer", "template"]
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "visualizer": {
+                            "type": "string",
+                            "enum": ["GPXVisualizer"]
+                        }
+                    },
+                    "additionalProperties": false,
+                    "required": ["visualizer"]
+                },
+                {
+                    "type": "boolean",
+                    "enum": [false]
+                }
+            ]
         }
     },
     "additionalProperties": false,
-    "minProperties": 14
+    "minProperties": 13
 }

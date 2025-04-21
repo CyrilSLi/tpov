@@ -1,5 +1,5 @@
 # Built-in modules:
-import subprocess, struct, pickle, os, sys, math, json, bisect, argparse, shutil
+import subprocess, struct, pickle, os, sys, math, json, argparse, shutil
 
 # Third-party modules:
 import osmium, gpxpy, jsonschema
@@ -69,12 +69,15 @@ class startWayHandler (osmium.SimpleHandler):
 
 # Visualize each intersection and action (e.g. process_divided) in a HTML file with a map background
 class HTMLVisualizer:
-    def __init__ (self, lat, lon, template, combine_duplicates = True):
-        with open (template, "r") as f:
+    def __init__ (self, lat, lon, template = None):
+        if template is None:
+            raise ValueError ("Template file not provided.")
+        elif not os.path.exists (proj_path (template)):
+            raise FileNotFoundError (f"Could not find {template}")
+        with open (proj_path (template), "r") as f:
             self.template = f.read ()
-        self.combine_duplicates = combine_duplicates
         self.lat, self.lon = lat, lon
-        self.uids, self.markers = set (), {}
+        self.markers = set (), {}
         self.points = []
         self.replacements = {
             r"%lat": lambda: str (self.lat),
@@ -83,47 +86,66 @@ class HTMLVisualizer:
             r"%points": lambda: str (self.points)
         }
     def add_marker (self, uid, lat, lon, text = ""):
-        if uid in self.uids:
-            if self.combine_duplicates:
-                self.markers [uid] ["text"] += f"<br><br>{text}"
+        if uid in self.markers:
+            self.markers [uid] ["text"] += f"<br><br>{text}"
         else:
             self.markers [uid] = {"lat": lat, "lon": lon, "text": text}
-            self.uids.add (uid)
     def add_point (self, lat, lon):
         self.points.append ([lat, lon])
-    def write (self, path = proj_path ("visualization.html")):
+    def write (self, path = os.path.abspath (proj_path ("visualization.html"))):
         page = self.template
         for i, j in self.replacements.items ():
             page = page.replace (i, j ())
         with open (path, "w") as f:
             f.write (page)
+        print (f"Visit file://{path} in a browser to view the visualization.")
+
+# Saves intersection and actions (e.g. process_divided) to a GPX file
+class GPXVisualizer:
+    def __init__ (self, lat, lon, template = None): # lat, lon, template are not used
+        self.markers = {}
+        self.gpx = gpxpy.gpx.GPX ()
+        track = gpxpy.gpx.GPXTrack ()
+        self.gpx.tracks.append (track)
+        self.segment = gpxpy.gpx.GPXTrackSegment ()
+        track.segments.append (self.segment)
+    def add_marker (self, uid, lat, lon, text = ""):
+        if uid in self.markers:
+            self.markers [uid].description += f"<br><br>{text}"
+        else:
+            self.markers [uid] = gpxpy.gpx.GPXWaypoint (lat, lon, description = text)
+    def add_point (self, lat, lon):
+        self.segment.points.append (gpxpy.gpx.GPXTrackPoint (lat, lon))
+    def write (self, path = os.path.abspath (proj_path ("visualization.gpx"))):
+        for i in self.markers.values ():
+            self.gpx.waypoints.append (i)
+        with open (path, "w") as f:
+            f.write (self.gpx.to_xml ())
+        print (f"Load {path} in a GPX viewer to view the visualization.")
 
 def match_gpx (
     gpx_path,
     map_path,
     start_id,
-    matcher_cls = "SimpleMatcher", # Matcher class
+    matcher_cls = SimpleMatcher, # Matcher class
     use_rtree = False, # Whether to use rtree in InMemMap (slow)
     exit_filter = lambda way: True, # Filter for intersection exits
     default_name = "Unnamed Road", # Default name for unnamed roads
     forward_angle = 45, # Angle threshold for forward direction
     follow_link = "Link -> %n", # Replace %n with link destination name, False to disable
     process_divided = None, # Divided road processing parameters
-    visualize = False, # Visualize intersections and actions in HTML
     hw_priority = {}, # Priority for highway types, default is 0
     matcher_params = {}, # Matcher parameters
-    visu_template = ""): # Visualization template file
+    visualize = False): # Visualization parameters
 
     with open (gpx_path, "r") as f:
         gpx = gpxpy.parse (f)
         points = tuple (gpx.walk (True))
     if visualize:
-        if not os.path.exists (proj_path (visu_template)):
-            raise FileNotFoundError (f"Could not find {visu_template}")
         bounds = gpx.get_bounds ()
-        visualizer = HTMLVisualizer (bounds.min_latitude + (bounds.max_latitude - bounds.min_latitude) / 2,
-                                     bounds.min_longitude + (bounds.max_longitude - bounds.min_longitude) / 2,
-                                     proj_path (visu_template))
+        visualizer = visualizers [visualize ["visualizer"]] (bounds.min_latitude + (bounds.max_latitude - bounds.min_latitude) / 2,
+                                                             bounds.min_longitude + (bounds.max_longitude - bounds.min_longitude) / 2,
+                                                             visualize.get ("template"))
 
     # Add a dict of information about a node into a marker
     def add_marker (node, info, title = "Marker"):
@@ -281,7 +303,7 @@ def match_gpx (
 
     def divided_process (case, dest, orig, *, orig_id = None, orig_angle = None, lattice_index = None):
         # Return true if action should be taken (e.g. ignore exit, add exit), false otherwise
-        nonlocal directions, map_con, tags, process_divided, matcher, default_name, visualize, add_marker
+        nonlocal directions, map_con, tags, process_divided, matcher, default_name, add_marker
         if case not in process_divided ["enabled_cases"]:
             return False
 
@@ -619,7 +641,6 @@ def SimpleTextDisplay (
     fields, metadata = None, {}
     stop_data = stop_data.copy () # Do not modify original data
 
-    point = lambda i: gpx [max (0, min (i, len (gpx) - 1))]
     def range_set (start, stop, key, value):
         nonlocal fields, gpx
         for i in range (max (0, start), min (stop, len (gpx))):
@@ -771,6 +792,10 @@ stop_matchers = {
 displays = {
     "SimpleTextDisplay": SimpleTextDisplay
 }
+visualizers = {
+    "HTMLVisualizer": HTMLVisualizer,
+    "GPXVisualizer": GPXVisualizer
+}
 
 parser = argparse.ArgumentParser (
     description = "Process intersection and stop data using OSM",
@@ -797,12 +822,11 @@ def main (args):
     follow_link = params ["follow_link"]
     snap_gpx = params ["snap_gpx"]
     process_divided = params ["process_divided"]
-    visualize = params ["visualize"]
     hw_priority = params ["hw_priority"]
     matcher_params = params ["matcher_params"]
     display_params = params ["display_params"]
     display = displays [display_params ["display"]]
-    visu_template = params ["visu_template"]
+    visualize = params ["visu_params"]
 
     if args.map:
         dirs, lattice_best, map_con, visualizer = match_gpx (
@@ -816,10 +840,9 @@ def main (args):
             forward_angle = forward_angle,
             follow_link = follow_link,
             process_divided = process_divided,
-            visualize = visualize,
             hw_priority = hw_priority,
             matcher_params = matcher_params,
-            visu_template = visu_template)
+            visualize = visualize)
     else:
         dirs, lattice_best, map_con, visualizer = [], [], None, None
 
@@ -879,15 +902,13 @@ def main (args):
         print ("Saved data to", gpx_out)
     
     if visualizer:
-        html_path = os.path.abspath (proj_path ("visualization.html"))
         fp = next (gpx.walk (True))
         visualizer.add_marker (object (), fp.latitude, fp.longitude, f"<b>Origin</b><br>Latitude: {fp.latitude}<br>Longitude: {fp.longitude}")
         for i in gpx.walk (True):
             lp = i
             visualizer.add_point (i.latitude, i.longitude)
         visualizer.add_marker (object (), lp.latitude, lp.longitude, f"<b>Destination</b><br>Latitude: {lp.latitude}<br>Longitude: {lp.longitude}")
-        visualizer.write (html_path)
-        print (f"Visit file://{html_path} in a browser to view the visualization.")
+        visualizer.write ()
 
 def script (args):
     import shlex

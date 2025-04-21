@@ -14,7 +14,6 @@
         "apply_filter": true,
         "enabled_cases": [1, 2, 3, 4]
     },
-    "visualize": true,
     "hw_priority": {
         "busway": 7,
         "motorway": 6,
@@ -44,5 +43,7 @@
         "bar_reverse": true,
         "use_reference": false
     },
-    "visu_template": "visualization_template.html"
+    "visu_params": {
+        "visualizer": "GPXVisualizer"
+    }
 }
