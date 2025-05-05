@@ -86,7 +86,7 @@ def from_gtfs (gtfs_dir = None, transfer = True, shape = False):
         # Reopen file as subprocess seem to reset the file pointer
         with open ("stop_times_sorted.txt", "a") as f:
             print ("Sorting stop_times (this may take a while)...")
-            sort = subprocess.run (f"cat -u stop_times.txt | tail -n +2 | sort -n -t , -k {ti},{ti} -k {ss},{ss}", shell = True, stdout = f)
+            sort = subprocess.run (f"LC_ALL=C cat -u stop_times.txt | tail -n +2 | sort -t , -k {ti},{ti} -k {ss},{ss}n", shell = True, stdout = f)
 
         lines = subprocess.run (["wc", "-l", "stop_times_sorted.txt"], capture_output = True)
         lines.check_returncode ()
