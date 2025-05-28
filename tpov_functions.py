@@ -8,7 +8,10 @@ from datetime import datetime, timedelta
 from texttable import Texttable
 import dateutil.parser
 
-def renamedict (d, assignments: dict):
+def renamedict (d, assignments: dict, default: str | None = None):
+    if isinstance (default, str):
+        for k in assignments.keys ():
+            d.setdefault (k, default)
     return type (d) ((assignments.get (k, k), v) for k, v in d.items ())
 
 def listsel (ls, prompt: str, min_len: int = 0, max_len: int = 0):

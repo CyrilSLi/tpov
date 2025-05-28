@@ -247,7 +247,7 @@ def from_osm (rel_id, transfer = True, shape = False, osm_out = "meta", opql_url
         "ref": "route_short_name",
         "id": "route_id",
         "operator": "agency_name"
-    })
+    }, "Unknown") # Use default value as OSM data may not have all fields
     trip.update ({
         "__sourcetype__": "OSM",
         "__stops__": [i for i in line_data [0] ["members"] if i ["type"] == "node"]
@@ -304,7 +304,28 @@ def from_osm (rel_id, transfer = True, shape = False, osm_out = "meta", opql_url
                 last_node = i ["nodes"] [0]
             
         last_correct = False
-        for i, j in zip (ways, ways [1 : ] + [ways [0]]): # Iterate len (ways) times
+        if len (ways) == 0:
+            print ("Error: No ways found in the relation.")
+            raise SystemExit
+        elif len (ways) == 1: # Single way, need user to specify direction
+            i = ways [0]
+            oneway = i ["tags"].get ("oneway")
+            if oneway == "yes":
+                extend_geom ("forward")
+            elif oneway == "-1":
+                extend_geom ("reverse")
+            else:
+                print (f"Way {i ['id']} has an ambiguous direction. Would you like to")
+                choice = input (f"Add it in (F)orward or (R)erverse direction, or skip processing shape data (any other key)? ").lower ()
+                if choice == "f":
+                    extend_geom ("forward")
+                elif choice == "r":
+                    extend_geom ("reverse")
+                else:
+                    shape = []
+            ways = None # Skip loop below
+
+        for i, j in (zip (ways, ways [1 : ] + [ways [0]]) if ways else []): # Iterate len (ways) times
             oneway = i ["tags"].get ("oneway")
             currF, currL = i ["nodes"] [0], i ["nodes"] [-1]
             nextF, nextL = j ["nodes"] [0], j ["nodes"] [-1]
@@ -362,9 +383,7 @@ def from_osm (rel_id, transfer = True, shape = False, osm_out = "meta", opql_url
             else:
                 print (f"Error: Way {i ['id']} does not connect with its previous way.")
                 raise SystemExit
-                
-        if shape:
-            trip ["__shape__"] = shape
+        trip ["__shape__"] = shape
 
     def get_transfer (_trip):
         for i in _trip ["__stops__"]:
