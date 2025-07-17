@@ -55,27 +55,39 @@ def from_gtfs (gtfs_dir = None, transfer = True, shape = False):
         raise ValueError ("Route name cannot be empty.")
 
     print ("Searching for route...")
-    route, route_names = None, {}
+    route, route_names = [], {}
     with open ("routes.txt") as f:
         for i in csv.DictReader (f):
             if route_name in (i ["route_short_name"].lower (), i ["route_long_name"].lower ()) and ("agency_id" not in i or i ["agency_id"] == agency ["agency_id"]):
-                route = i
+                route.append (i)
             route_names [i ["route_id"]] = i ["route_short_name"] if i ["route_short_name"] else i ["route_long_name"]
+    route_ids = set (i ["route_id"] for i in route)
     if not route:
-        raise ValueError (f"Route '{route_name}' not found.")
+        print (f"Route '{route_name}' not found.")
+        raise SystemExit
+    elif len (route) > 1:
+        keys = tuple (route [0].keys ())
+        choicetable (
+            keys,
+            ([i [j] for j in keys] for i in route)
+        )
+        print (f"Multiple routes with name '{route_name}' found. All routes will be included in the search for trips.")
+        route = next (choice (route, "Select which route's information to use for metadata: ", 1, 1))
+    else:
+        route = route [0]
 
     print ("Searching for trips...")
     trip_names = {}
     with open ("trips.txt") as f:
         trip_ids = []
         for i in csv.DictReader (f):
-            if i ["route_id"] == route ["route_id"]:
+            if i ["route_id"] in route_ids:
                 trip_ids.append (i)
             trip_names [i ["trip_id"]] = route_names [i ["route_id"]]
     del route_names # Free up memory
 
     print (f"{len (trip_ids)} trips found.")
-    if not os.path.exists ("stop_times_sorted.txt.pkl"): # Index stop_times for faster lookup
+    if not (os.path.exists ("stop_times_sorted.txt") and os.path.exists ("stop_times_sorted.txt.pkl")): # Index stop_times for faster lookup
         with open ("stop_times.txt") as f:
             header = iter (csv.reader (f)).__next__ ()
             ti, ss = header.index ("trip_id") + 1, header.index ("stop_sequence") + 1
