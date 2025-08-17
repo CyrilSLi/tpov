@@ -30,12 +30,10 @@ core_tags = {
     "Stop": ("stop_id", "stop_name", "stop_lat", "stop_lon", "__transfer__")
 }
 
-def from_gtfs (gtfs_dir = None, transfer = True, shape = False):
+def from_gtfs (gtfs_dir, transfer = True, shape = False):
     # Third-party modules:
     from tqdm import tqdm
 
-    if not gtfs_dir:
-        raise ValueError ("GTFS directory cannot be empty.")
     orig = os.getcwd () # Save original working directory
     os.chdir (gtfs_dir)
 
@@ -724,7 +722,7 @@ def from_12306 (_ = None, transfer = True, shape = False):
 
     return trip, get_transfer if transfer else lambda x: None
 
-def from_macau (shape_dir = None, transfer = True, shape = False):
+def from_macau (shape_dir, transfer = True, shape = False):
     # Built-in modules:
     from zipfile import ZipFile
 
@@ -732,8 +730,6 @@ def from_macau (shape_dir = None, transfer = True, shape = False):
     import shapefile, xlrd
     from pyproj import Proj, Transformer
 
-    if not shape_dir:
-        raise ValueError ("Shape directory cannot be empty.")
     zip_file = ZipFile (shape_dir)
 
     get_file = lambda path: zip_file.open ((i for i in zip_file.namelist () if path in i).__next__ ())
@@ -829,6 +825,64 @@ def from_macau (shape_dir = None, transfer = True, shape = False):
 
     return trip, lambda x: None # Transfer already included in the data
 
+def from_mbta (url, transfer = True, shape = False):
+    # Built-in modules:
+    from urllib.parse import urlparse, parse_qs
+
+    # Third-party modules:
+    import requests as req
+
+    line = urlparse (url).path.split ("/") [-2]
+    query = parse_qs (urlparse (url).query)
+    if not (line and all (i in query for i in ("schedule_direction[direction_id]", "schedule_direction[variant]"))):
+        print ("Please provide a schedule URL with 'schedule_direction[direction_id]' and 'schedule_direction[variant]' parameters.")
+        raise SystemExit
+
+    line_api = req.get (f'https://www.mbta.com/schedules/line_api?id={line}&direction_id={query ["schedule_direction[direction_id]"] [0]}&route_pattern={query ["schedule_direction[variant]"] [0]}')
+    if line_api.status_code == 200:
+        line_api = line_api.json () ["route_stop_lists"] [0]
+    else:
+        raise ConnectionError (f"Error querying MBTA API: {line_api.status_code} {line_api.reason}")
+
+    trip = {
+        "__sourcetype__": "MBTA",
+        "agency_name": "MBTA", # Hardcoded
+        "__stops__": []
+    }
+    for i in line_api:
+        trip.update (i.pop ("route"))
+        stop = renamedict (i, {
+            "id": "stop_id",
+            "name": "stop_name"
+        })
+        stop ["stop_lat"] = i ["station_info"] ["latitude"]
+        stop ["stop_lon"] = i ["station_info"] ["longitude"]
+        if transfer:
+            stop ["__transfer__"] = [j ["name"] for j in i ["connections"]]
+        stop.pop ("station_info")
+        stop.pop ("stop_features")
+        stop.pop ("connections")
+        trip ["__stops__"].append (stop)
+    trip = renamedict (trip, {
+        "id": "route_id",
+        "long_name": "route_long_name",
+        "name": "route_short_name"
+    })
+
+    if shape:
+        map_api = req.get (f'https://www.mbta.com/schedules/map_api?id={line}&direction_id={query ["schedule_direction[direction_id]"] [0]}&shape_id={query ["schedule_direction[variant]"] [0]}')
+        if map_api.status_code == 200:
+            map_api = map_api.json () ["polylines"]
+        else:
+            raise ConnectionError (f"Error querying MBTA API: {map_api.status_code} {map_api.reason}")
+        choicetable ( # TODO: find better way to match shapes with route directions
+            ["ID"],
+            ([i ["id"]] for i in map_api)
+        )
+        trip ["__shape__"] = [i [ : : -1] for i in next (choice (map_api, "Select one shape: ", 1, 1)) ["positions"]] # Shape in [lat, lon]
+
+    return trip, lambda x: None # Transfer already included in the data
+
 def sel_stops (trip, json_out = None, core_only = False, get_transfer = lambda x: None):
     fields = _stop_fields.get (trip ["__sourcetype__"].upper (), _stop_fields ["__default__"])
     choicetable (
@@ -867,7 +921,8 @@ sources = {
     "TIANDITU": from_tianditu,
     "BAIDU": from_baidu,
     "12306": from_12306,
-    "MACAU": from_macau
+    "MACAU": from_macau,
+    "MBTA": from_mbta
 }
 
 parser = argparse.ArgumentParser (
@@ -875,12 +930,13 @@ parser = argparse.ArgumentParser (
     formatter_class = argparse.RawDescriptionHelpFormatter,
     epilog = """\
 Currently supported data sources and required parameters:
-Source      Parameter       Example
-GTFS        GTFS directory  /path/to/gtfs (unzipped)
-OSM         Relation ID     1234567
-BAIDU       Seckey          a1b2c3... ('none' to exclude)
-12306       None            N/A
-MACAU       ShapeFile       /path/to/shape.zip
+Source      Parameter         Example
+GTFS        GTFS directory    /path/to/gtfs (unzipped)
+OSM         Relation ID       1234567
+BAIDU       Seckey            a1b2c3... ('none' to exclude)
+12306       None              N/A
+MACAU       ShapeFile         /path/to/shape.zip
+MBTA        Schedule URL      www.mbta.com/schedules/...
 
 Core tags are consistent across all data sources:
 (note that identifiers are only unique within the data source)
