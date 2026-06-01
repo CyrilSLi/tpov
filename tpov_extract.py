@@ -30,6 +30,10 @@ core_tags = {
     "Stop": ("stop_id", "stop_name", "stop_lat", "stop_lon", "__transfer__")
 }
 
+def stripped_DictReader (f, fieldnames = None):
+    for i in csv.DictReader (f, fieldnames = fieldnames):
+        yield {k.strip (): v.strip () for k, v in i.items ()}
+
 def from_gtfs (gtfs_dir, transfer = True, shape = False):
     # Third-party modules:
     from tqdm import tqdm
@@ -37,8 +41,8 @@ def from_gtfs (gtfs_dir, transfer = True, shape = False):
     orig = os.getcwd () # Save original working directory
     os.chdir (gtfs_dir)
 
-    with open ("agency.txt") as f:
-        agency = tuple (csv.DictReader (f))
+    with open ("agency.txt", encoding = "utf-8-sig") as f:
+        agency = tuple (stripped_DictReader (f))
         if len (agency) > 1:
             choicetable (
                 ["Name", "URL"],
@@ -54,8 +58,8 @@ def from_gtfs (gtfs_dir, transfer = True, shape = False):
 
     print ("Searching for route...")
     route, route_names = [], {}
-    with open ("routes.txt") as f:
-        for i in csv.DictReader (f):
+    with open ("routes.txt", encoding = "utf-8-sig") as f:
+        for i in stripped_DictReader (f):
             if route_name in (i ["route_short_name"].lower (), i ["route_long_name"].lower ()) and ("agency_id" not in i or i ["agency_id"] == agency ["agency_id"]):
                 route.append (i)
             route_names [i ["route_id"]] = i ["route_short_name"] if i ["route_short_name"] else i ["route_long_name"]
@@ -76,9 +80,9 @@ def from_gtfs (gtfs_dir, transfer = True, shape = False):
 
     print ("Searching for trips...")
     trip_names = {}
-    with open ("trips.txt") as f:
+    with open ("trips.txt", encoding = "utf-8-sig") as f:
         trip_ids = []
-        for i in csv.DictReader (f):
+        for i in stripped_DictReader (f):
             if i ["route_id"] in route_ids:
                 trip_ids.append (i)
             trip_names [i ["trip_id"]] = route_names [i ["route_id"]]
@@ -86,7 +90,7 @@ def from_gtfs (gtfs_dir, transfer = True, shape = False):
 
     print (f"{len (trip_ids)} trips found.")
     if not (os.path.exists ("stop_times_sorted.txt") and os.path.exists ("stop_times_sorted.txt.pkl")): # Index stop_times for faster lookup
-        with open ("stop_times.txt") as f:
+        with open ("stop_times.txt", encoding = "utf-8-sig") as f:
             header = iter (csv.reader (f)).__next__ ()
             ti, ss = header.index ("trip_id") + 1, header.index ("stop_sequence") + 1
         
@@ -103,7 +107,7 @@ def from_gtfs (gtfs_dir, transfer = True, shape = False):
         lines = int (lines.stdout.decode ().split () [0])
         line_cnt = tqdm (total = lines, desc = "Indexing stop_times", mininterval = 0.5)
         ti -= 1 # Convert to 0-based index
-        with open ("stop_times_sorted.txt") as f: # May be able to be optimized using csv module
+        with open ("stop_times_sorted.txt", encoding = "utf-8-sig") as f: # May be able to be optimized using csv module
             f.readline () # Skip header
             indices, last_id, fileptr, si = {}, None, f.tell (), header.index ("stop_id")
             line, transfers = f.readline (), {}
@@ -139,11 +143,11 @@ def from_gtfs (gtfs_dir, transfer = True, shape = False):
     trip_ids = [i for i in trip_ids if i ["trip_id"] in indices] # Remove duplicates
     print (f"Removed {dup - len (trip_ids)} duplicate trips, {len (trip_ids)} remaining.")
 
-    with open ("stop_times_sorted.txt") as f:
-        header = iter (csv.reader (f)).__next__ ()
+    with open ("stop_times_sorted.txt", encoding = "utf-8-sig") as f:
+        header = tuple (i.strip () for i in iter (csv.reader (f)).__next__ ())
         for i in trip_ids:
             f.seek (indices [i ["trip_id"]]) # Seek to file pointer of trip_id
-            line = csv.DictReader (f, fieldnames = header)
+            line = stripped_DictReader (f, fieldnames = header)
             for j in line:
                 if j ["trip_id"] != i ["trip_id"]:
                     break
@@ -174,8 +178,8 @@ def from_gtfs (gtfs_dir, transfer = True, shape = False):
     for i in trips_display:
         for j in i ["__stops__"]:
             stops [j ["stop_id"]] = None
-    with open ("stops.txt") as f:
-        for i in csv.DictReader (f):
+    with open ("stops.txt", encoding = "utf-8-sig") as f:
+        for i in stripped_DictReader (f):
             if i ["stop_id"] in stops:
                 stops [i ["stop_id"]] = i
 
@@ -215,8 +219,8 @@ def from_gtfs (gtfs_dir, transfer = True, shape = False):
 
     if shape:
         shape = []
-        with open ("shapes.txt") as f:
-            for i in csv.DictReader (f):
+        with open ("shapes.txt", encoding = "utf-8-sig") as f:
+            for i in stripped_DictReader (f):
                 if i ["shape_id"] == trip ["shape_id"]:
                     shape.append (([float (i ["shape_pt_lon"]), float (i ["shape_pt_lat"])], int (i ["shape_pt_sequence"])))
         trip ["__shape__"] = [i [0] for i in sorted (shape, key = lambda x: x [1])] # Sort by sequence
