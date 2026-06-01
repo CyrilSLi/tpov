@@ -77,7 +77,7 @@ class HTMLVisualizer:
         with open (proj_path (template), "r") as f:
             self.template = f.read ()
         self.lat, self.lon = lat, lon
-        self.markers = set (), {}
+        self.markers = {}
         self.points = []
         self.replacements = {
             r"%lat": lambda: str (self.lat),
