@@ -39,7 +39,9 @@ mkdir .demo
 python3.10 tpov_convert.py /path/to/mapfile tpov_filter.txt
 ```
 
-过滤文件用于过滤地图中的不必要数据。`tpov_filter.txt` 应该适配大多数情况，但如需可修改。详情请见 [osmfilter wiki (英文)](https://wiki.openstreetmap.org/wiki/Osmfilter) 。
+过滤文件用于过滤地图中的不必要数据。`tpov_filter.txt` 应该适配大多数情况，但如需可修改。详情请见 [osmfilter 维基（英文）](https://wiki.openstreetmap.org/wiki/Osmfilter) 。
+
+**警告**：处理大型地图文件需要很长时间和大量内存（处理500MB的过滤后的地图可占用30GB内存）。如果地图文件太大，您可以用 `osmconvert -b=<x1>,<y1>,<x2>,<y2>` 裁剪地图 （详情请见 [osmconvert 维基（英文）](https://wiki.openstreetmap.org/wiki/Osmconvert#Applying_Geographical_Borders)）或从 [BBBike](https://extract.bbbike.org/) 截取并下载自定义的地图区域。
 
 ## 列表选择
 
@@ -168,7 +170,7 @@ gopro-dashboard.py --use-gpx-only --units-speed kph --units-altitude m --units-d
 gopro-dashboard.py --use-gpx-only --units-speed kph --units-altitude m --units-distance km --font NotoSansCJK-VF --overlay-size 1920x1080 --layout-xml tpov_layout_zh.xml /path/to/video .demo/overlay.mp4 --gpx .demo/track.matched.truncated.gpx --map-api-key KEY
 ```
 
-`kph`, `m`, 与 `km` 可被替换为其他单位。在 [gopro-dashboard-overlay 文档 (英文)](https://github.com/time4tea/gopro-dashboard-overlay/tree/main/docs/xml/examples/04-metrics#conversions) 中列举了可选的单位。
+`kph`, `m`, 与 `km` 可被替换为其他单位。在 [gopro-dashboard-overlay 文档（英文）](https://github.com/time4tea/gopro-dashboard-overlay/tree/main/docs/xml/examples/04-metrics#conversions) 中列举了可选的单位。
 
 ## 尾声
 

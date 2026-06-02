@@ -806,7 +806,7 @@ parser.add_argument ("params", help = "Path to JSON parameter file")
 parser.add_argument ("gpx", help = "Path to .gpx track file")
 parser.add_argument ("--map", metavar = "file", help = "Path to .o5m map file")
 parser.add_argument ("--stop", metavar = "JSON", help = "Path to stop data")
-parser.add_argument ("--start", metavar = "ID", help = "Start node or way of the track")
+parser.add_argument ("--start", metavar = "ID", help = "Manually set start way of track")
 
 def main (args):
     params = json.load (open (args.params, "r"))

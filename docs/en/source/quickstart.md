@@ -38,6 +38,8 @@ python3.10 tpov_convert.py /path/to/mapfile tpov_filter.txt
 
 The filter file is used to filter out unnecessary data from the map. The sample filter file `tpov_filter.txt` should be sufficient for most cases, but you can modify it if necessary. Read the [osmfilter wiki](https://wiki.openstreetmap.org/wiki/Osmfilter) for more information.
 
+**Warning**: Large map files will take a long time to process and require a lot of memory (a filtered map of around 500MB can require 30GB of free memory). If the map file is too large, you can clip it using `osmconvert -b=<x1>,<y1>,<x2>,<y2>` (see the [osmconvert wiki](https://wiki.openstreetmap.org/wiki/Osmconvert#Applying_Geographical_Borders) for more information) or download a map extract of a custom area from [BBBike](https://extract.bbbike.org/).
+
 ## List Selection
 
 Throughout the process, you will be asked to select item(s) from a list. The list will be displayed in the following format:
