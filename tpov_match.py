@@ -627,8 +627,7 @@ def match_gpx (
             directions.append ((j + 1, orig, last_name, dirs [0], dirs [1], dirs [2], exit_dir))
             add_marker (orig, {"Current": last_name, "Left": dirs [0], "Forward": dirs [1], "Right": dirs [2], "Exit": exit_dir}, "Intersection", gpx_index = i.obs)
 
-    for i in directions:
-        i = tuple ((matcher.lattice_best [i [0]].obs, ) + i [1 : ]) # # Use gpx index instead of lattice index (which can contain non-emitting states)
+    directions = [tuple ((matcher.lattice_best [i [0]].obs, ) + i [1 : ]) for i in directions] # # Use gpx index instead of lattice index (which can contain non-emitting states)
 
     return directions, matcher.lattice_best, map_con, visualizer if visualize else None
 
