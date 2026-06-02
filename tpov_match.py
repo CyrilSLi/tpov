@@ -148,11 +148,14 @@ def match_gpx (
                                                              visualize.get ("template"))
 
     # Add a dict of information about a node into a marker
-    def add_marker (node, info, title = "Marker"):
+    def add_marker (node, info, title = "Marker", gpx_index = None):
         if visualize:
             nonlocal visualizer, map_con
             template = "<b>{title}</b><br>Node ID: {node}<br>Latitude: {lat}<br>Longitude: {lon}<br>{info}"
-            lat, lon = map_con.graph [node] [0]
+            if gpx_index:
+                lat, lon = points [gpx_index].latitude, points [gpx_index].longitude
+            else:
+                lat, lon = map_con.graph [node] [0]
             info = "<br>".join (f"{k}: {v}" for k, v in info.items ())
             visualizer.add_marker (node, lat, lon, template.format (title = title, node = node, lat = lat, lon = lon, info = info))
 
@@ -213,10 +216,15 @@ def match_gpx (
         _, lastidx = matcher.match ([(i.latitude, i.longitude, i.time) for i in points], tqdm = tqdm)
         print (f"Matched {lastidx} points on start way {start_id}")
         start_con.graph = map_con.graph # Restore original graph
+
+        if lastidx != matcher.lattice_best [-1].obs:
+            raise ValueError (f"Discrepancy between last matched index ({lastidx}) and last lattice index ({matcher.lattice_best [-1].obs}). Please report this error.")
+        match_points = [(i.latitude, i.longitude, i.time) for i in points [lastidx + 1 : ]]
     else:
         matcher = matcher_cls (map_con, **matcher_params)
+        match_points = [(i.latitude, i.longitude, i.time) for i in points]
 
-    _, lastidx = matcher.match([(i.latitude, i.longitude, i.time) for i in points], tqdm = tqdm)
+    _, lastidx = matcher.match(match_points, tqdm = tqdm)
     if lastidx < len (points) - 1:
         if not lastidx: # No points matched - likely due to origin being too far from a road
             raise SystemExit ("No points matched. Try increasing max_dist_init in the matcher parameters or setting a start way.")
@@ -564,7 +572,7 @@ def match_gpx (
                 if dirs:
                     directions.append (dirs)
                     if name: # Indicate process_divided (3) result
-                        add_marker (orig, {"Current": last_name, "Left": dirs [3], "Forward": dirs [4], "Right": dirs [5], "Exit": exit_dir}, "Intersection")
+                        add_marker (orig, {"Current": last_name, "Left": dirs [3], "Forward": dirs [4], "Right": dirs [5], "Exit": exit_dir}, "Intersection", gpx_index = i.obs)
                 continue
             last_name = exit_name
             if not follow_link is False:
@@ -617,7 +625,10 @@ def match_gpx (
                 dirs [index] = candidate [0].get ("name", default_name)
             # [gpx index, intersection node, current name, left name, forward name, right name, exit direction]
             directions.append ((j + 1, orig, last_name, dirs [0], dirs [1], dirs [2], exit_dir))
-            add_marker (orig, {"Current": last_name, "Left": dirs [0], "Forward": dirs [1], "Right": dirs [2], "Exit": exit_dir}, "Intersection")
+            add_marker (orig, {"Current": last_name, "Left": dirs [0], "Forward": dirs [1], "Right": dirs [2], "Exit": exit_dir}, "Intersection", gpx_index = i.obs)
+
+    for i in directions:
+        i = tuple ((matcher.lattice_best [i [0]].obs, ) + i [1 : ]) # # Use gpx index instead of lattice index (which can contain non-emitting states)
 
     return directions, matcher.lattice_best, map_con, visualizer if visualize else None
 
