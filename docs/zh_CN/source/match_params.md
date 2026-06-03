@@ -62,4 +62,10 @@
   - `bar_reverse` - 如 `true` 进度条将从长变短。如 `false` 进度条将从短变长。
   - `use_reference` - 如 `true` 则将站名保存为 GPX 元数据指针。可减小文件大小但会减慢处理速度。在大多数情况下使用 `false`。
 
-- `visu_template` - 用于可视化的 HTML 模板文件路径。
+- `visu_params` - 一个控制数据可视化方式的参数对象。
+  - `visualizer` - 一个可视化匹配数据（包括路径、路口、`process_divided` 结果和站点）的函数。
+    - 支持的可视化函数：
+      - `GPXVisualizer` - 将可视化结果以 GPX 格式保存到 `visualization.gpx`。
+      - `HTMLVisualizer` - 将可视化结果以 HTML 格式保存到 `visualization.html`。
+  - `HTMLVisualizer` 需要的额外参数：
+    - `template` - 用于可视化的 HTML 模板，参见 `visualization_template_zh.html`。

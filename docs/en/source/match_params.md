@@ -63,4 +63,10 @@ To ensure proper formatting of parameters, the parameter file is validated again
   - `bar_reverse` - If `true`, the progress bar will start long and shorten. If `false`, the progress bar will start short and lengthen.
   - `use_reference` - If `true`, saves stop names as references to GPX metadata. Reduce file size but slows processing. Use `false` in most cases.
 
-- `visu_template` - The path to an HTML template file used for visualization.
+- `visu_params` - An object with parameters to control how to visualize the data.
+  - `visualizer` - A function which visualizes the matched data, including the path, intersections, `process_divided` results, and stops.
+    - Supported visualizers:
+      - `GPXVisualizer` - Saves the visualization in GPX format to `visualization.gpx`.
+      - `HTMLVisualizer` - Saves the visualization in HTML format to `visualization.html`.
+  - Additional parameters required for `HTMLVisualizer`:
+    - `template` - An HTML template to use for visualization, see `visualization_template.html` for an example.
