@@ -782,15 +782,17 @@ def gpx_snap (gpx, map_con, lattice_best, distance):
         if inc_k ():
             return # Matched path is too short to snap
 
-    for i, j in zip (gpx.walk (True), (i.edge_m for i in lattice_best)):
-        while not seg_equal (segments [- distance - 1], j):
+    gpx_points = tuple (gpx.walk (True))
+    for i in (i for i in lattice_best if i.is_emitting ()):
+        point = gpx_points [i.obs]
+        while not seg_equal (segments [- distance - 1], i.edge_m):
             if inc_k ():
                 break
         while len (segments) > distance * 2 + 1:
             segments.pop (0)
         
-        snaps = tuple (intersection (i, *map_con.graph [k.l1] [0], *map_con.graph [k.l2] [0]) for k in segments)
-        i.latitude, i.longitude, _ = min (snaps, key = lambda x: x [2])
+        snaps = tuple (intersection (point, *map_con.graph [k.l1] [0], *map_con.graph [k.l2] [0]) for k in segments)
+        point.latitude, point.longitude, _ = min (snaps, key = lambda x: x [2])
 
 map_matchers = {
     "SimpleMatcher": SimpleMatcher,
