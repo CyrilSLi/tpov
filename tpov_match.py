@@ -783,7 +783,7 @@ def gpx_snap (gpx, map_con, lattice_best, distance):
             return # Matched path is too short to snap
 
     gpx_points = tuple (gpx.walk (True))
-    for i in (i for i in lattice_best if i.is_emitting ()):
+    for i in (m for m in lattice_best if m.is_emitting ()):
         point = gpx_points [i.obs]
         while not seg_equal (segments [- distance - 1], i.edge_m):
             if inc_k ():
